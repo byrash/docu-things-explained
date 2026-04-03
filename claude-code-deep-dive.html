@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Claude Code — Deep Dive</title>
+<style>
+:root {
+  --bg: #0a0b10; --bg2: #10121a; --bg3: #171a26; --bg4: #1f2233;
+  --text: #e4e6f0; --text2: #9ea2b4; --text3: #6d7186;
+  --accent: #6366f1; --accent2: #818cf8; --accent-bg: rgba(99,102,241,0.08);
+  --green: #34d399; --green2: #10b981; --green-bg: rgba(52,211,153,0.08);
+  --orange: #fbbf24; --orange2: #f59e0b; --orange-bg: rgba(251,191,36,0.08);
+  --red: #f87171; --red2: #ef4444; --red-bg: rgba(248,113,113,0.08);
+  --cyan: #22d3ee; --cyan2: #06b6d4; --cyan-bg: rgba(34,211,238,0.08);
+  --pink: #f472b6; --pink2: #ec4899;
+  --border: #262940; --border2: #1e2035;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.75;-webkit-font-smoothing:antialiased}
+
+/* ─── HERO ─── */
+.hero{text-align:center;padding:72px 32px 48px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(99,102,241,0.14) 0%,transparent 70%);pointer-events:none}
+.hero h1{font-family:var(--mono);font-size:38px;font-weight:800;background:linear-gradient(135deg,#fff,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;letter-spacing:-0.5px}
+.hero .subtitle{font-size:17px;color:var(--text2);margin-top:10px;position:relative;max-width:700px;display:inline-block}
+
+/* ─── NAV ─── */
+nav.sticky{position:sticky;top:0;z-index:100;background:rgba(10,11,16,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto;white-space:nowrap}
+nav .inner{max-width:1400px;margin:0 auto;display:flex;gap:0}
+nav a{display:inline-block;padding:14px 18px;color:var(--text3);text-decoration:none;font-size:13px;font-family:var(--mono);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;border-bottom:2px solid transparent;transition:all .2s}
+nav a:hover,nav a.active{color:var(--accent);border-bottom-color:var(--accent)}
+nav .sep{width:1px;background:var(--border);margin:10px 4px;flex-shrink:0}
+
+/* ─── LAYOUT ─── */
+.wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+section{padding:64px 0 56px;border-bottom:1px solid var(--border)}
+section:last-child{border-bottom:none}
+
+/* ─── PART DIVIDERS ─── */
+.part-divider{padding:40px 0 0;text-align:center}
+.part-divider .part-label{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:3px;color:var(--accent);display:inline-block;padding:6px 20px;border:1px solid rgba(99,102,241,0.3);border-radius:20px;background:rgba(99,102,241,0.06)}
+
+/* ─── HEADINGS ─── */
+h2{font-family:var(--mono);font-size:26px;font-weight:800;color:#fff;margin-bottom:8px;display:flex;align-items:center;gap:12px;letter-spacing:-0.3px}
+h2 .n{font-size:12px;color:#fff;background:var(--accent);padding:4px 10px;border-radius:5px;font-weight:700;letter-spacing:0.5px;flex-shrink:0}
+h3{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text);margin:36px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border2)}
+.sdesc{color:var(--text2);font-size:15px;margin-bottom:20px;max-width:850px;line-height:1.8}
+
+/* ─── Q&A BOX ─── */
+.qa{background:var(--accent-bg);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:18px 22px;margin:18px 0}
+.qa .q{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:4px}
+.qa .a{font-size:14px;color:var(--text);line-height:1.8}
+.qa .a code{font-family:var(--mono);font-size:12px;background:rgba(99,102,241,0.12);color:var(--accent2);padding:1px 5px;border-radius:3px}
+.qa .a strong{color:#fff}
+
+/* ─── LAYER STACK ─── */
+.layers{display:flex;flex-direction:column;gap:3px;margin:14px 0}
+.ly{display:flex;align-items:stretch;border-radius:8px;overflow:hidden;border:1px solid var(--border2)}
+.ly .ll{flex-shrink:0;width:160px;padding:12px 14px;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;color:#fff}
+.ly .lb{flex:1;padding:12px 18px;background:var(--bg3);font-size:13px;color:var(--text2);line-height:1.8}
+.ly .lb code{font-family:var(--mono);font-size:12px;background:rgba(99,102,241,0.1);color:var(--accent2);padding:1px 5px;border-radius:3px}
+
+/* ─── CARDS GRID ─── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+.cd{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px 20px;border-top:3px solid var(--accent)}
+.cd[data-c="g"]{border-top-color:var(--green2)} .cd[data-c="o"]{border-top-color:var(--orange2)}
+.cd[data-c="r"]{border-top-color:var(--red2)} .cd[data-c="c"]{border-top-color:var(--cyan2)}
+.cd[data-c="p"]{border-top-color:var(--pink2)}
+.cd h4{font-family:var(--mono);font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.cd p,.cd li{font-size:13px;color:var(--text2);line-height:1.8}
+.cd ul{padding-left:16px;margin-top:6px}
+.cd code{font-family:var(--mono);font-size:12px;background:rgba(99,102,241,0.1);color:var(--accent2);padding:1px 5px;border-radius:3px}
+
+/* ─── TABLE ─── */
+table.t{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+table.t th{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);text-align:left;padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border)}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:top}
+table.t td:first-child{font-family:var(--mono);font-size:12px;color:var(--green);font-weight:600;white-space:nowrap}
+table.t tr:last-child td{border-bottom:none}
+table.t tr:hover td{background:rgba(99,102,241,0.03)}
+
+/* ─── STEPS ─── */
+.steps{counter-reset:s;margin:14px 0}
+.st{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border2)}
+.st:last-child{border-bottom:none}
+.st::before{counter-increment:s;content:counter(s);flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.st .sb{flex:1}
+.st .st-t{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.st .st-d{font-size:13px;color:var(--text2);line-height:1.7}
+.st .st-d code{font-family:var(--mono);font-size:12px;background:rgba(99,102,241,0.1);color:var(--accent2);padding:1px 5px;border-radius:3px}
+
+/* ─── CODE BLOCK ─── */
+.codeblock{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:14px 0;overflow-x:auto}
+.codeblock .cb-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px}
+.codeblock pre{font-family:var(--mono);font-size:13px;color:var(--text2);line-height:2;white-space:pre-wrap}
+.codeblock .kw{color:var(--accent2)} .codeblock .str{color:var(--cyan)} .codeblock .fn{color:var(--green)}
+.codeblock .cmt{color:var(--text3)} .codeblock .val{color:var(--orange)} .codeblock .err{color:var(--red)}
+
+/* ─── DIAGRAM (CSS-based, no SVG clipping) ─── */
+.flow-row{display:flex;align-items:center;gap:0;margin:14px 0;flex-wrap:wrap}
+.flow-node{background:var(--bg3);border:1.5px solid var(--accent2);border-radius:8px;padding:10px 16px;text-align:center;flex-shrink:0}
+.flow-node.store{border-color:var(--orange2);border-top:2.5px solid var(--orange2)}
+.flow-node.ext{border-color:var(--green2);border-style:dashed;background:none}
+.flow-node .fn-t{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text)}
+.flow-node .fn-s{font-size:11px;color:var(--text3);margin-top:2px}
+.flow-node .fn-tag{font-size:10px;color:var(--green);font-family:var(--mono);font-weight:600}
+.flow-arrow{color:var(--accent);font-family:var(--mono);font-size:18px;padding:0 8px;flex-shrink:0}
+.flow-arrow.grn{color:var(--green2)} .flow-arrow.org{color:var(--orange2)}
+
+/* ─── TAGS ─── */
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600}
+.tg{background:rgba(52,211,153,0.15);color:var(--green)} .tr{background:rgba(248,113,113,0.15);color:var(--red)}
+.ta{background:rgba(99,102,241,0.15);color:var(--accent2)} .to{background:rgba(251,191,36,0.15);color:var(--orange)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Claude Code Deep Dive</h1>
+  <p class="subtitle">Memory, Authentication, Sandboxing, Hooks, Multi-Provider APIs, Streaming — and how to apply these patterns to a Copilot CLI</p>
+</div>
+
+<nav class="sticky">
+  <div class="inner">
+    <a href="#mem">Memory</a>
+    <a href="#auth">Auth</a>
+    <div class="sep"></div>
+    <a href="#sandbox">Sandboxing</a>
+    <div class="sep"></div>
+    <a href="#copilot">Copilot CLI</a>
+    <a href="#srt">SRT Deploy</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="part-divider"><span class="part-label">Part I — How Claude Code Talks to Models</span></div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ──── MEMORY ──── -->
+<section id="mem">
+  <h2><span class="n">MEM</span> Memory &amp; Preferences</h2>
+  <p class="sdesc">All preferences (CLAUDE.md, auto-memory, team memory) are sent on every API call. The model has no persistent local state.</p>
+
+  <div class="qa">
+    <div class="q">Is CLAUDE.md cached locally or sent to the model every time?</div>
+    <div class="a"><strong>Both.</strong> Files are read from disk <strong>once per session</strong> (memoized), then the <strong>same content is included in every API call</strong> as <code>messages[0]</code>. Anthropic's <strong>prompt caching</strong> (<code>cache_control: ephemeral</code>) avoids re-processing the stable prefix server-side — but the bytes still travel over the wire every time.</div>
+  </div>
+
+  <h3>The 4-Tier Hierarchy</h3>
+  <p class="sdesc">Loaded in order — later files have higher priority (model pays more attention to content near the end).</p>
+  <div class="layers">
+    <div class="ly"><div class="ll" style="background:rgba(99,102,241,0.25)">1. Managed</div><div class="lb"><code>/etc/claude-code/CLAUDE.md</code> — Set by IT admins. Lowest priority.</div></div>
+    <div class="ly"><div class="ll" style="background:rgba(52,211,153,0.25)">2. User</div><div class="lb"><code>~/.claude/CLAUDE.md</code> — Personal global preferences for all projects.</div></div>
+    <div class="ly"><div class="ll" style="background:rgba(251,191,36,0.25)">3. Project</div><div class="lb"><code>CLAUDE.md</code>, <code>.claude/CLAUDE.md</code>, <code>.claude/rules/*.md</code> from repo root → CWD. Shared with team.</div></div>
+    <div class="ly"><div class="ll" style="background:rgba(248,113,113,0.25)">4. Local</div><div class="lb"><code>CLAUDE.local.md</code> — Private, gitignored. Highest priority.</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--text3);margin:6px 0 0">Plus: <strong>AutoMem</strong> (<code>~/.claude/projects/&lt;repo&gt;/memory/</code>) and <strong>TeamMem</strong> (server-synced shared memory).</p>
+
+  <h3>Lifecycle: Disk → Prompt → API</h3>
+  <div class="flow-row">
+    <div class="flow-node store"><div class="fn-t">CLAUDE.md files</div><div class="fn-s">4 tiers + auto + team</div></div>
+    <div class="flow-arrow org">→</div>
+    <div class="flow-node"><div class="fn-t">getMemoryFiles()</div><div class="fn-tag">MEMOIZED</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="fn-t">getUserContext()</div><div class="fn-tag">MEMOIZED</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="fn-t">prependUserContext()</div><div class="fn-s">injects as messages[0]</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node ext"><div class="fn-t">Anthropic API</div><div class="fn-s">EVERY call</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--text3);margin:6px 0">Prompt caching: stable prefix at messages[0] → server reuses precomputed KV attention cache → 90% cost reduction, lower latency. Content still sent for hash verification.</p>
+
+  <h3>Memory Types</h3>
+  <table class="t">
+    <thead><tr><th>Type</th><th>Location</th><th>Persistence</th><th>How It Enters Prompt</th></tr></thead>
+    <tbody>
+      <tr><td>CLAUDE.md</td><td>Various (hierarchy)</td><td>Permanent (disk)</td><td>Prepended as <code>messages[0]</code> every call</td></tr>
+      <tr><td>Auto-Memory</td><td><code>~/.claude/projects/&lt;repo&gt;/memory/</code></td><td>Permanent (background agent writes)</td><td>System prompt section or per-turn attachment</td></tr>
+      <tr><td>Team Memory</td><td><code>.../memory/team/</code></td><td>Server-synced (bidirectional)</td><td>Alongside auto-memory in system prompt</td></tr>
+      <tr><td>Session Memory</td><td>Per-session markdown</td><td>Conversation lifetime</td><td>Used during compaction to preserve key context</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Auto-Memory Extraction</h3>
+  <div class="steps">
+    <div class="st"><div class="sb"><div class="st-t">Query loop ends (no tool calls)</div><div class="st-d"><code>handleStopHooks</code> triggers extraction. Throttled to every N eligible turns.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Fork a background agent</div><div class="st-d"><code>runForkedAgent()</code> — shares parent's prompt cache. Only has Read/Grep/Glob/Write tools, restricted to memory dir.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Extract durable memories → write to disk</div><div class="st-d">Scans existing files to avoid duplicates. Writes topic files + updates <code>MEMORY.md</code> index. Appends <code>memory_saved</code> to main conversation.</div></div></div>
+  </div>
+
+  <h3>Cache Invalidation</h3>
+  <p class="sdesc">Triggers: <code>/clear</code>, <code>/compact</code>, worktree change, settings sync, <code>/memory</code> dialog → clears all memoize caches → next call re-reads everything from disk.</p>
+</section>
+
+<!-- ──── AUTH ──── -->
+<section id="auth">
+  <h2><span class="n">AUTH</span> Authentication &amp; Authorization</h2>
+  <p class="sdesc">API keys, OAuth 2.0 with PKCE, multi-provider credential management, and automatic token refresh.</p>
+
+  <h3>Provider Selection</h3>
+  <div class="flow-row">
+    <div class="flow-node"><div class="fn-t">getAPIProvider()</div><div class="fn-s">checks env vars</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--orange2)"><div class="fn-t" style="color:var(--orange)">AWS Bedrock</div><div class="fn-s">USE_BEDROCK=1</div></div>
+    <div style="padding:0 6px;color:var(--text3);font-size:13px">or</div>
+    <div class="flow-node" style="border-color:var(--cyan2)"><div class="fn-t" style="color:var(--cyan)">Google Vertex</div><div class="fn-s">USE_VERTEX=1</div></div>
+    <div style="padding:0 6px;color:var(--text3);font-size:13px">or</div>
+    <div class="flow-node" style="border-color:var(--pink2)"><div class="fn-t" style="color:var(--pink)">Azure Foundry</div><div class="fn-s">USE_FOUNDRY=1</div></div>
+    <div style="padding:0 6px;color:var(--text3);font-size:13px">or</div>
+    <div class="flow-node"><div class="fn-t" style="color:var(--accent2)">Anthropic 1P</div><div class="fn-s">default</div></div>
+  </div>
+  <p class="sdesc" style="margin-top:12px">First-party has two sub-modes: <strong>OAuth</strong> (Claude.ai subscribers) → <code>Authorization: Bearer &lt;token&gt;</code>, or <strong>API Key</strong> (direct) → <code>x-api-key: &lt;key&gt;</code>.</p>
+
+  <h3>API Key Priority Chain</h3>
+  <table class="t">
+    <thead><tr><th>#</th><th>Source</th><th>How Set</th><th>Storage</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>ANTHROPIC_API_KEY</code></td><td>User sets in shell</td><td>Process environment</td></tr>
+      <tr><td>2</td><td>File descriptor (CCR)</td><td>Injected by Go env-manager</td><td>Unix pipe FD → well-known file</td></tr>
+      <tr><td>3</td><td><code>apiKeyHelper</code> script</td><td>Configured in settings</td><td>Script stdout, 5-min SWR cache</td></tr>
+      <tr><td>4</td><td>macOS Keychain</td><td>Written by <code>/login</code></td><td><code>security find-generic-password</code></td></tr>
+      <tr><td>5</td><td>Config file</td><td>Fallback</td><td><code>~/.claude/.credentials.json</code> (chmod 600)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>OAuth 2.0 Flow (PKCE)</h3>
+  <div class="steps">
+    <div class="st"><div class="sb"><div class="st-t">Generate PKCE pair + start local listener</div><div class="st-d">32 random bytes → base64url code_verifier. SHA-256 → code_challenge. <code>AuthCodeListener</code> on random port.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Open browser to authorize URL</div><div class="st-d">Claude.ai: <code>https://claude.com/cai/oauth/authorize</code>. Client ID: <code>9d1c250a-e61b-44d9-88ed-5944d1962f5e</code> (public, not secret).</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">User authenticates → redirect to localhost</div><div class="st-d">Browser redirects to <code>http://localhost:{port}/callback?code=...&amp;state=...</code>.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Exchange code for tokens → store securely</div><div class="st-d">POST to <code>platform.claude.com/v1/oauth/token</code>. Store: macOS keychain (hex-encoded, 30s read cache) or <code>~/.claude/.credentials.json</code> (Linux).</div></div></div>
+  </div>
+
+  <h3>Token Refresh</h3>
+  <div class="cards">
+    <div class="cd"><h4>Pre-emptive Refresh</h4><p>Tokens checked before every API call. Considered expired <strong>5 min before</strong> actual <code>expiresAt</code> (clock drift buffer).</p></div>
+    <div class="cd" data-c="g"><h4>Cross-Process Locking</h4><p>File-based lock on <code>~/.claude/</code> coordinates refresh across concurrent instances. 5 retries, 1-2s randomized backoff.</p></div>
+    <div class="cd" data-c="r"><h4>401 Recovery</h4><p>Deduplicates concurrent 401s. Checks if keychain has a fresher token (another instance refreshed). Force-refreshes if same token.</p></div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="part-divider"><span class="part-label">Part II — Security &amp; Isolation</span></div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ──── SANDBOXING ──── -->
+<section id="sandbox">
+  <h2><span class="n">SBX</span> Sandboxing</h2>
+  <p class="sdesc">Two-layer OS-level isolation: filesystem via Seatbelt (macOS) / bubblewrap (Linux), network via proxy filtering. Kernel-enforced, not bypassable.</p>
+
+  <h3>Execution Flow</h3>
+  <div class="flow-row">
+    <div class="flow-node"><div class="fn-t">BashTool.call()</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="fn-t">shouldUseSandbox()</div><div class="fn-s">enabled? excluded? escape hatch?</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="fn-t">SandboxManager.wrap()</div><div class="fn-s">generates OS wrapper</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--orange2)"><div class="fn-t">macOS: sandbox-exec</div></div>
+    <div style="padding:0 4px;color:var(--text3);font-size:12px">or</div>
+    <div class="flow-node" style="border-color:var(--cyan2)"><div class="fn-t">Linux: bwrap</div></div>
+  </div>
+
+  <h3>macOS — Seatbelt</h3>
+  <div class="steps">
+    <div class="st"><div class="sb"><div class="st-t">Default-deny profile generated</div><div class="st-d"><code>(version 1)(deny default)</code> — blocks all operations. Then specific allows added.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Filesystem: read broadly, write narrowly</div><div class="st-d"><code>(allow file-read* (subpath "/"))</code> then <code>(allow file-write* (subpath "/project"))</code>. Later rules override. Move blocked via <code>(deny file-write-unlink)</code>.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Network: localhost-only proxy</div><div class="st-d">Only <code>(allow network-outbound (remote tcp "localhost:PROXY_PORT"))</code>. All other network blocked.</div></div></div>
+  </div>
+
+  <h3>Linux — Bubblewrap</h3>
+  <div class="steps">
+    <div class="st"><div class="sb"><div class="st-t">Read-only root + selective bind mounts</div><div class="st-d"><code>--ro-bind / /</code> then <code>--bind /project /project</code> for writable dirs. Deny-within-allow via <code>--ro-bind /dev/null &lt;path&gt;</code>.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">Network + PID namespace isolation</div><div class="st-d"><code>--unshare-net</code> (empty namespace, zero interfaces) + <code>--unshare-pid</code>. Network restored via socat Unix socket bridges to host proxy.</div></div></div>
+    <div class="st"><div class="sb"><div class="st-t">seccomp-bpf blocks Unix sockets</div><div class="st-d">Two-stage: socat bridges connect first (allowed), then <code>apply-seccomp</code> installs BPF filter blocking <code>socket(AF_UNIX)</code> before exec'ing user command.</div></div></div>
+  </div>
+
+  <h3>Network Proxy</h3>
+  <div class="cards">
+    <div class="cd" data-c="g"><h4>HTTP CONNECT Proxy</h4><p>Handles HTTPS via CONNECT tunnels + plain HTTP forwarding. Calls <code>filterNetworkRequest()</code> per connection. Returns 403 for blocked domains.</p></div>
+    <div class="cd" data-c="c"><h4>SOCKS5 Proxy</h4><p>For SSH/git traffic. Same allowlist. On Linux, socat bridges connect sandbox's isolated netns to host proxies via Unix sockets.</p></div>
+    <div class="cd" data-c="r"><h4>Domain Filtering</h4><p>Reject malformed hosts. Canonicalize IPs (prevent inet_aton bypass). Check deny → allow → ask user. Wildcard <code>*.example.com</code> supported. Rejects wildcard on IP literals.</p></div>
+  </div>
+
+  <h3>Always-Denied Paths</h3>
+  <table class="t">
+    <thead><tr><th>Path</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>settings.json files</td><td>Prevents sandbox escape via config modification</td></tr>
+      <tr><td>.claude/commands, agents, skills</td><td>Same privilege as arbitrary code execution</td></tr>
+      <tr><td>.git/hooks</td><td>Prevents code execution via git hooks</td></tr>
+      <tr><td>.git/config</td><td>Prevents <code>core.fsmonitor</code> RCE attacks</td></tr>
+      <tr><td>.bashrc, .zshrc</td><td>Prevents shell initialization hijacking</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="part-divider"><span class="part-label">Part III — Applying to Copilot CLI</span></div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ──── COPILOT ──── -->
+<section id="copilot">
+  <h2><span class="n">GH</span> Copilot CLI Implementation</h2>
+  <p class="sdesc">GitHub's new Copilot CLI (<code>npm install -g @github/copilot</code>) is a full agentic CLI — file editing, command execution, /plan, /fleet, MCP, session persistence. But it has no sandboxing or hooks.</p>
+
+  <h3>Realistic Options</h3>
+  <div class="cards">
+    <div class="cd" data-c="g">
+      <h4>A. AGENTS.md + Org Policy</h4>
+      <p>Push instructions via GitHub admin. Zero custom code. <strong>Not a security boundary</strong> — model can be tricked.</p>
+    </div>
+    <div class="cd">
+      <h4>B. Wrap Whole Process with SRT</h4>
+      <p><code>srt npx @github/copilot</code> — sandboxes everything. May need domain allowlisting for Copilot's API calls.</p>
+    </div>
+    <div class="cd" data-c="c">
+      <h4>C. Surgical: Sandbox Only Spawned Commands</h4>
+      <p>Set <code>SHELL=/path/to/sandboxed-bash</code>. Copilot runs free (API calls work), but every command it executes is sandboxed. <strong>Best practical option.</strong></p>
+    </div>
+    <div class="cd" data-c="o">
+      <h4>D. Build Custom CLI (GitHub Models API)</h4>
+      <p>Full control. Your own agentic loop + tools + sandbox + hooks. ~2 weeks MVP. Most effort, most power.</p>
+    </div>
+  </div>
+
+  <h3>Defense in Depth (3 Layers)</h3>
+  <div class="layers">
+    <div class="ly"><div class="ll" style="background:rgba(99,102,241,0.25)">AGENTS.md</div><div class="lb"><strong>Policy layer</strong> — guides model behavior. Not a security boundary. Model can be prompt-injected.</div></div>
+    <div class="ly"><div class="ll" style="background:rgba(251,191,36,0.25)">Permission Rules</div><div class="lb"><strong>Software gate</strong> — allow/deny/ask patterns. Reduces prompt fatigue. Defense layer, not enforcement.</div></div>
+    <div class="ly"><div class="ll" style="background:rgba(52,211,153,0.25)">OS Sandbox (SRT)</div><div class="lb"><strong>Hard enforcement</strong> — kernel blocks syscalls. Filesystem: Seatbelt/bwrap. Network: proxy filtering. <strong>True security boundary.</strong></div></div>
+  </div>
+</section>
+
+<!-- ──── SRT DEPLOY ──── -->
+<section id="srt">
+  <h2><span class="n">SRT</span> Sandbox Runtime Deployment</h2>
+  <p class="sdesc">How to bootstrap <code>@anthropic-ai/sandbox-runtime</code> on every developer machine and enforce filesystem + network policies.</p>
+
+  <h3>Stability</h3>
+  <table class="t">
+    <thead><tr><th>Aspect</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Version</td><td>v0.0.46 — beta API surface, kernel primitives are rock solid</td></tr>
+      <tr><td>Production</td><td>Powers all sandboxed commands in Claude Code (millions of users)</td></tr>
+      <tr><td>Source</td><td><a href="https://github.com/anthropic-experimental/sandbox-runtime" style="color:var(--accent)">github.com/anthropic-experimental/sandbox-runtime</a></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Deployment Strategies</h3>
+  <div class="cards">
+    <div class="cd"><h4>A. MDM Push (Enterprise)</h4><p><code>npm install -g @anthropic-ai/sandbox-runtime</code> + push managed-settings.json via Jamf/Ansible. Users cannot override admin deny rules.</p></div>
+    <div class="cd" data-c="g"><h4>B. Shell Alias</h4><p><code>alias copilot='srt npx @github/copilot'</code> in company dotfiles. Simple, transparent, can be bypassed.</p></div>
+    <div class="cd" data-c="o"><h4>C. Wrapper in PATH</h4><p><code>/usr/local/bin/copilot-secure</code> containing <code>exec srt npx @github/copilot "$@"</code>. Fully transparent.</p></div>
+    <div class="cd" data-c="c"><h4>D. Sandboxed SHELL</h4><p>Set <code>SHELL=/path/to/sandboxed-bash</code> — Copilot runs normally, spawned commands sandboxed. Best approach.</p></div>
+  </div>
+
+  <h3>Config Hierarchy</h3>
+  <div class="layers">
+    <div class="ly"><div class="ll" style="background:rgba(248,113,113,0.25)">1. Policy</div><div class="lb">macOS: <code>/Library/Application Support/ClaudeCode/managed-settings.json</code> · Linux: <code>/etc/claude-code/managed-settings.json</code> · <strong>Cannot be overridden.</strong></div></div>
+    <div class="ly"><div class="ll" style="background:rgba(99,102,241,0.25)">2. User</div><div class="lb"><code>~/.claude/settings.json</code></div></div>
+    <div class="ly"><div class="ll" style="background:rgba(52,211,153,0.25)">3. Project</div><div class="lb"><code>$CWD/.claude/settings.json</code></div></div>
+    <div class="ly"><div class="ll" style="background:rgba(34,211,238,0.25)">4. Local</div><div class="lb"><code>$CWD/.claude/settings.local.json</code></div></div>
+  </div>
+
+  <h3>Filesystem Policy</h3>
+  <div class="codeblock">
+    <div class="cb-title">Managed Settings — Filesystem</div>
+    <pre>{
+  <span class="str">"sandbox"</span>: {
+    <span class="fn">"enabled"</span>: <span class="val">true</span>,
+    <span class="fn">"filesystem"</span>: {
+      <span class="str">"allowWrite"</span>: [<span class="val">"."</span>, <span class="val">"/tmp"</span>],
+      <span class="str">"denyWrite"</span>:  [<span class="err">"~/.ssh"</span>, <span class="err">"~/.aws"</span>, <span class="err">"~/.gnupg"</span>, <span class="err">"~/.config"</span>],
+      <span class="str">"denyRead"</span>:   [<span class="err">"~/.ssh/id_rsa"</span>, <span class="err">"~/.aws/credentials"</span>],
+      <span class="str">"allowRead"</span>:  [<span class="val">"."</span>]
+    }
+  }
+}</pre>
+  </div>
+
+  <table class="t">
+    <thead><tr><th>Request</th><th>Rule</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Write /project/src/app.ts</td><td>allowWrite: "."</td><td><span class="tag tg">ALLOWED</span></td></tr>
+      <tr><td>Write ~/.bashrc</td><td>Not in allowWrite</td><td><span class="tag tr">DENIED by kernel</span></td></tr>
+      <tr><td>Read ~/.ssh/id_rsa</td><td>denyRead match</td><td><span class="tag tr">DENIED by kernel</span></td></tr>
+      <tr><td>Read /project/package.json</td><td>allowRead: "."</td><td><span class="tag tg">ALLOWED</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Network Egress Policy</h3>
+  <div class="codeblock">
+    <div class="cb-title">Managed Settings — Network</div>
+    <pre>{
+  <span class="str">"permissions"</span>: {
+    <span class="fn">"allow"</span>: [
+      <span class="val">"WebFetch(domain:github.com)"</span>,
+      <span class="val">"WebFetch(domain:*.github.com)"</span>,
+      <span class="val">"WebFetch(domain:api.githubcopilot.com)"</span>,
+      <span class="val">"WebFetch(domain:*.githubusercontent.com)"</span>,
+      <span class="val">"WebFetch(domain:registry.npmjs.org)"</span>,
+      <span class="val">"WebFetch(domain:pypi.org)"</span>
+    ],
+    <span class="fn">"deny"</span>: [
+      <span class="err">"Read(~/.ssh)"</span>, <span class="err">"Read(~/.aws)"</span>,
+      <span class="err">"Edit(.env)"</span>, <span class="err">"Edit(.env.*)"</span>
+    ]
+  }
+}</pre>
+  </div>
+
+  <table class="t">
+    <thead><tr><th>Request</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>curl https://github.com/user/repo</code></td><td><span class="tag tg">FORWARDED</span></td></tr>
+      <tr><td><code>curl https://evil.com/steal</code></td><td><span class="tag tr">BLOCKED 403</span></td></tr>
+      <tr><td><code>npm install lodash</code></td><td><span class="tag tg">FORWARDED</span> (registry.npmjs.org allowed)</td></tr>
+      <tr><td><code>pip install requests</code></td><td><span class="tag tg">FORWARDED</span> (pypi.org allowed)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Programmatic Usage</h3>
+  <div class="codeblock">
+    <div class="cb-title">SRT as a Library</div>
+    <pre><span class="kw">import</span> { SandboxManager } <span class="kw">from</span> <span class="str">'@anthropic-ai/sandbox-runtime'</span>
+
+<span class="cmt">// 1. Initialize — starts proxy, loads config</span>
+<span class="kw">await</span> SandboxManager.<span class="fn">initialize</span>({
+  network: { allowedDomains: [<span class="str">'github.com'</span>, <span class="str">'*.github.com'</span>] },
+  filesystem: { allowWrite: [<span class="str">'.'</span>], denyRead: [<span class="str">'~/.ssh'</span>] }
+})
+
+<span class="cmt">// 2. Wrap command — returns sandbox-exec (macOS) or bwrap (Linux) string</span>
+<span class="kw">const</span> cmd = <span class="kw">await</span> SandboxManager.<span class="fn">wrapWithSandbox</span>(<span class="str">'npm test'</span>)
+
+<span class="cmt">// 3. Execute — child inherits all restrictions</span>
+<span class="kw">const</span> child = <span class="fn">spawn</span>(cmd, { shell: <span class="val">true</span>, stdio: <span class="str">'inherit'</span> })
+
+<span class="cmt">// 4. Cleanup mount-point artifacts (Linux)</span>
+child.<span class="fn">on</span>(<span class="str">'exit'</span>, () => SandboxManager.<span class="fn">cleanupAfterCommand</span>())</pre>
+  </div>
+
+  <div class="qa">
+    <div class="q">Can SRT sandbox any process, not just Claude Code?</div>
+    <div class="a"><strong>Yes.</strong> It's model-agnostic. Sandbox anything: <code>srt &lt;any-command&gt;</code>. Works with Copilot CLI, your own CLI, or non-AI processes.</div>
+  </div>
+</section>
+
+</div>
+
+<div style="text-align:center;padding:48px 24px;color:var(--text3);font-size:13px;font-family:var(--mono)">
+  Claude Code Deep Dive — Memory · Auth · Providers · Streaming · Sandboxing · Hooks · Copilot CLI · SRT
+</div>
+
+<script>
+const tocLinks=document.querySelectorAll('nav a[href]');
+const sections=document.querySelectorAll('section[id]');
+function updateToc(){let c='';sections.forEach(s=>{if(scrollY>=s.offsetTop-120)c=s.id});tocLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+c))}
+addEventListener('scroll',updateToc);updateToc();
+</script>
+</body>
+</html>
