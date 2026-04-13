@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenShell — Technical Design</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#161b22',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#58a6ff',
+      secondaryColor: '#238636',
+      secondaryTextColor: '#e6edf3',
+      secondaryBorderColor: '#3fb950',
+      tertiaryColor: '#6e40c9',
+      tertiaryTextColor: '#e6edf3',
+      tertiaryBorderColor: '#bc8cff',
+      noteBkgColor: '#1c2333',
+      noteTextColor: '#e6edf3',
+      noteBorderColor: '#30363d',
+      lineColor: '#8b949e',
+      textColor: '#e6edf3',
+      mainBkg: '#1f6feb',
+      nodeBorder: '#58a6ff',
+      clusterBkg: '#161b2280',
+      clusterBorder: '#30363d',
+      titleColor: '#e6edf3',
+      edgeLabelBackground: '#161b22',
+      actorBkg: '#1f6feb',
+      actorBorder: '#58a6ff',
+      actorTextColor: '#e6edf3',
+      actorLineColor: '#58a6ff',
+      signalColor: '#8b949e',
+      signalTextColor: '#e6edf3',
+      labelBoxBkgColor: '#1c2333',
+      labelBoxBorderColor: '#30363d',
+      labelTextColor: '#e6edf3',
+      loopTextColor: '#e6edf3',
+      activationBorderColor: '#58a6ff',
+      activationBkgColor: '#1c2333',
+      sequenceNumberColor: '#0d1117',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { mirrorActors: false, messageAlign: 'left' },
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+  });
+</script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --green: #3fb950;
+    --green-dim: #238636;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f35 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    margin-top: 0.5rem;
+  }
+  .hero .meta {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .hero .meta span {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 3rem;
+  }
+  nav.toc h2 { font-size: 1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+  nav.toc ol { columns: 2; column-gap: 2rem; padding-left: 1.2rem; }
+  nav.toc li { margin-bottom: 0.4rem; break-inside: avoid; }
+  nav.toc a { color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section { margin-bottom: 3.5rem; }
+  section > h2 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.6rem;
+    color: var(--text);
+  }
+  p { margin-bottom: 0.9rem; color: var(--text); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.92rem;
+  }
+  thead th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface-2);
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+  tbody td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: rgba(88,166,255,0.04); }
+  td code, p code, li code, h4 code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.88em;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--cyan);
+  }
+
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem 1rem;
+    margin: 1.2rem 0 1.5rem;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+  }
+  .diagram-wrap .mermaid {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .diagram-wrap .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .callout {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.93rem;
+  }
+  .callout.warn { border-left-color: var(--orange); }
+  .callout.success { border-left-color: var(--green); }
+  .callout strong { color: var(--text); }
+
+  ul, ol { margin: 0.5rem 0 1rem 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+
+  .layer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin: 0.8rem 0;
+  }
+  .layer-card h4 {
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .layer-card h4 .num {
+    background: var(--accent-dim);
+    color: #fff;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .layer-card p { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 0; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    nav.toc ol { columns: 1; }
+    .hero h1 { font-size: 2rem; }
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .tag-green { background: rgba(63,185,80,0.15); color: var(--green); }
+  .tag-orange { background: rgba(210,153,34,0.15); color: var(--orange); }
+  .tag-red { background: rgba(248,81,73,0.15); color: var(--red); }
+  .tag-blue { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-purple { background: rgba(188,140,255,0.15); color: var(--purple); }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .flow-step .step-num {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+  .flow-step .step-body h4 { font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .flow-step .step-body p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0; }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>NVIDIA OpenShell</h1>
+  <p class="subtitle">Technical Design &mdash; Sandboxed Runtimes for Autonomous AI Agents</p>
+  <div class="meta">
+    <span>Rust + Python</span>
+    <span>K3s-in-Docker</span>
+    <span>OPA / Rego Policy</span>
+    <span>gRPC Control Plane</span>
+    <span>Defense-in-Depth</span>
+  </div>
+</div>
+
+<div class="container">
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">System Overview</a></li>
+    <li><a href="#architecture">Architecture &amp; Crate Map</a></li>
+    <li><a href="#deployment">Deployment Model</a></li>
+    <li><a href="#enforcement">Enforcement Layers</a></li>
+    <li><a href="#policy">Policy System</a></li>
+    <li><a href="#inference">Inference Routing</a></li>
+    <li><a href="#providers">Provider &amp; Credential System</a></li>
+    <li><a href="#observability">Observability (OCSF)</a></li>
+    <li><a href="#data-flow">End-to-End Data Flow</a></li>
+    <li><a href="#modes">Network Modes</a></li>
+    <li><a href="#landscape">Competitive Landscape</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="overview">
+  <h2>1. System Overview</h2>
+  <p>
+    OpenShell provides policy-governed sandbox runtimes for autonomous AI agents. Agents operate inside
+    isolated containers where network, filesystem, process, and inference access are enforced by
+    a layered security stack. The platform ships as a single Docker container embedding K3s, a gRPC
+    gateway, and the sandbox supervisor &mdash; requiring only Docker on the host.
+  </p>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TB
+      subgraph HOST["🖥️ Host Machine"]
+        direction TB
+        subgraph DOCKER["🐳 Docker Container — K3s Cluster"]
+          direction LR
+          subgraph GW["Gateway Pod"]
+            direction TB
+            GW_GRPC["gRPC + HTTP Server"]
+            GW_DB["SQLite / Postgres"]
+            GW_SSH["SSH Tunnel Endpoint"]
+            GW_K8S["K8s Sandbox Orchestrator"]
+          end
+          subgraph SB["Sandbox Pod ×N"]
+            direction TB
+            SB_PROXY["HTTP CONNECT Proxy"]
+            SB_OPA["OPA Engine (Rego)"]
+            SB_LAND["Landlock LSM"]
+            SB_SEC["seccomp BPF"]
+            SB_NET["Network Namespace"]
+            SB_L7["L7 Inspection"]
+          end
+          GW_K8S -->|"schedule pods"| SB_PROXY
+          GW_GRPC <-->|"policy + config"| SB_OPA
+        end
+        subgraph USER["User Interface"]
+          CLI["openshell CLI"]
+          TUI["Terminal UI (ratatui)"]
+          SDK["Python SDK"]
+        end
+        CLI -->|"gRPC + mTLS"| GW_GRPC
+        TUI -->|"gRPC + mTLS"| GW_GRPC
+        SDK -->|"gRPC + mTLS"| GW_GRPC
+      end
+
+      style HOST fill:#0d1117,stroke:#58a6ff,stroke-width:2px,color:#e6edf3
+      style DOCKER fill:#0d1117,stroke:#3fb950,stroke-width:2px,color:#e6edf3
+      style GW fill:#1a2744,stroke:#58a6ff,stroke-width:2px,color:#e6edf3
+      style SB fill:#1a2e1a,stroke:#f85149,stroke-width:2px,color:#e6edf3
+      style USER fill:#1a1a2e,stroke:#bc8cff,stroke-width:2px,color:#e6edf3
+      style GW_GRPC fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style GW_DB fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style GW_SSH fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style GW_K8S fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style SB_PROXY fill:#b35900,stroke:#d29922,color:#fff
+      style SB_OPA fill:#b35900,stroke:#d29922,color:#fff
+      style SB_LAND fill:#8b0000,stroke:#f85149,color:#fff
+      style SB_SEC fill:#8b0000,stroke:#f85149,color:#fff
+      style SB_NET fill:#8b0000,stroke:#f85149,color:#fff
+      style SB_L7 fill:#b35900,stroke:#d29922,color:#fff
+      style CLI fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style TUI fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style SDK fill:#6e40c9,stroke:#bc8cff,color:#fff
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="architecture">
+  <h2>2. Architecture &amp; Crate Map</h2>
+  <p>OpenShell is a Rust workspace of 12 crates, with a Python SDK and protobuf service contracts.</p>
+
+  <h3>Crate Dependency Graph</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TD
+      CORE["openshell-core<br/><i>proto, config, errors</i>"]
+
+      CORE --> POLICY["openshell-policy<br/><i>YAML schema</i>"]
+      CORE --> ROUTER["openshell-router<br/><i>inference routing</i>"]
+      CORE --> PROVIDERS["openshell-providers<br/><i>credential backends</i>"]
+      CORE --> BOOTSTRAP["openshell-bootstrap<br/><i>Docker, K3s, PKI</i>"]
+
+      POLICY --> SERVER["openshell-server<br/><i>control plane</i>"]
+      ROUTER --> SERVER
+      POLICY --> SANDBOX["openshell-sandbox<br/><i>runtime enforcer</i>"]
+      ROUTER --> SANDBOX
+      CORE --> OCSF["openshell-ocsf<br/><i>OCSF logging</i>"]
+      OCSF --> SANDBOX
+
+      POLICY --> TUI["openshell-tui<br/><i>terminal UI</i>"]
+      PROVIDERS --> TUI
+      BOOTSTRAP --> TUI
+      BOOTSTRAP --> VM["openshell-vm<br/><i>microVM (exp.)</i>"]
+
+      BOOTSTRAP --> CLI["openshell-cli<br/><i>user binary</i>"]
+      PROVIDERS --> CLI
+      TUI --> CLI
+      CORE --> PROVER["openshell-prover<br/><i>Z3 verifier</i>"]
+      PROVER --> CLI
+
+      style CORE fill:#1f6feb,stroke:#58a6ff,stroke-width:3px,color:#fff
+      style POLICY fill:#238636,stroke:#3fb950,color:#fff
+      style ROUTER fill:#238636,stroke:#3fb950,color:#fff
+      style PROVIDERS fill:#238636,stroke:#3fb950,color:#fff
+      style BOOTSTRAP fill:#238636,stroke:#3fb950,color:#fff
+      style SERVER fill:#b35900,stroke:#d29922,stroke-width:2px,color:#fff
+      style SANDBOX fill:#b35900,stroke:#d29922,stroke-width:2px,color:#fff
+      style OCSF fill:#8b0000,stroke:#f85149,color:#fff
+      style TUI fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style VM fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style CLI fill:#86198f,stroke:#f778ba,stroke-width:3px,color:#fff
+      style PROVER fill:#86198f,stroke:#f778ba,color:#fff
+    </div>
+  </div>
+
+  <h3>Crate Responsibilities</h3>
+  <table>
+    <thead><tr><th>Crate</th><th>Type</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>openshell-core</code></td><td><span class="tag tag-blue">lib</span></td><td>Protobuf codegen (tonic-build), shared config, errors, paths, version</td></tr>
+      <tr><td><code>openshell-policy</code></td><td><span class="tag tag-blue">lib</span></td><td>YAML policy schema, YAML ↔ proto round-trip with <code>serde_yml</code></td></tr>
+      <tr><td><code>openshell-router</code></td><td><span class="tag tag-blue">lib</span></td><td>Privacy-aware inference routing, HTTP proxy to backends via <code>reqwest</code></td></tr>
+      <tr><td><code>openshell-ocsf</code></td><td><span class="tag tag-blue">lib</span></td><td>OCSF v1.7.0 event model &mdash; builders, formatters, tracing layers</td></tr>
+      <tr><td><code>openshell-providers</code></td><td><span class="tag tag-blue">lib</span></td><td>Pluggable credential providers (Copilot, Claude, OpenAI, etc.)</td></tr>
+      <tr><td><code>openshell-bootstrap</code></td><td><span class="tag tag-blue">lib</span></td><td>Gateway/cluster lifecycle &mdash; Docker, K3s, PKI, mTLS, image ops</td></tr>
+      <tr><td><code>openshell-server</code></td><td><span class="tag tag-green">bin</span></td><td>Control plane &mdash; gRPC/HTTP, persistence, K8s sandbox ops, SSH/WS tunnels</td></tr>
+      <tr><td><code>openshell-sandbox</code></td><td><span class="tag tag-green">bin</span></td><td>Sandbox runtime &mdash; proxy, OPA, L7, Landlock, seccomp, netns, SSH</td></tr>
+      <tr><td><code>openshell-cli</code></td><td><span class="tag tag-green">bin</span></td><td>User-facing <code>openshell</code> binary with all subcommands</td></tr>
+      <tr><td><code>openshell-tui</code></td><td><span class="tag tag-blue">lib</span></td><td>Ratatui interactive terminal dashboard</td></tr>
+      <tr><td><code>openshell-prover</code></td><td><span class="tag tag-blue">lib</span></td><td>Z3-based policy satisfiability verification</td></tr>
+      <tr><td><code>openshell-vm</code></td><td><span class="tag tag-orange">exp</span></td><td>Experimental libkrun microVM runtime (no host Docker)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>gRPC Services (proto/)</h3>
+  <table>
+    <thead><tr><th>Service</th><th>Proto File</th><th>Scope</th></tr></thead>
+    <tbody>
+      <tr><td><code>OpenShell</code></td><td>openshell.proto</td><td>Health, sandbox CRUD, SSH sessions, streaming exec, providers, config, logs, policy advisor</td></tr>
+      <tr><td><code>Inference</code></td><td>inference.proto</td><td>Inference bundle delivery, cluster inference config</td></tr>
+      <tr><td>&mdash;</td><td>sandbox.proto</td><td>SandboxPolicy messages (network, L7, filesystem, process rules)</td></tr>
+      <tr><td>&mdash;</td><td>datamodel.proto</td><td>Sandbox, SandboxSpec, SandboxTemplate, phases/status</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Python SDK</h3>
+  <p>
+    The <code>openshell</code> PyPI package (built with Maturin) bundles the Rust CLI binary and exposes:
+    <code>Sandbox</code> (context manager), <code>SandboxClient</code> (gRPC CRUD + streaming exec),
+    <code>exec_python</code> (cloudpickle serialization), and <code>InferenceRouteClient</code>.
+    Credentials are injected as placeholders; the SDK never sees raw secrets.
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="deployment">
+  <h2>3. Deployment Model</h2>
+
+  <h3>Standard Path: Docker + K3s</h3>
+  <p>
+    The primary deployment packages everything into a single Docker container running an embedded K3s
+    cluster. The gateway and sandbox pods run on that cluster. The only host prerequisite is Docker.
+  </p>
+
+  <table>
+    <thead><tr><th>Deployment Path</th><th>Host Dependency</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>openshell gateway start</code> (local)</td>
+        <td>Docker Desktop</td>
+        <td><span class="tag tag-green">Production</span></td>
+      </tr>
+      <tr>
+        <td><code>openshell gateway start --remote</code></td>
+        <td>Docker on remote host (SSH)</td>
+        <td><span class="tag tag-green">Production</span></td>
+      </tr>
+      <tr>
+        <td><code>openshell-vm</code> (libkrun microVM)</td>
+        <td>Hypervisor.framework / KVM</td>
+        <td><span class="tag tag-orange">Experimental</span></td>
+      </tr>
+      <tr>
+        <td>Standalone <code>openshell-sandbox</code></td>
+        <td>None (bare Linux + local policy files)</td>
+        <td><span class="tag tag-blue">Dev / CI</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Infrastructure Stack</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TD
+      CMD["openshell gateway start"] --> DOCKER
+
+      subgraph DOCKER["🐳 Docker Container"]
+        direction TB
+        K3S["K3s Server"] --> HELM
+        subgraph HELM["Helm Chart Deployment"]
+          direction TB
+          SS["StatefulSet<br/>(gateway)"]
+          SVC["NodePort Service<br/>(port 30051)"]
+          SA["ServiceAccount"]
+          RBAC["RBAC<br/>(Cluster + NS)"]
+          NP["NetworkPolicy"]
+        end
+      end
+
+      PKI["~/.config/openshell/<br/>mTLS PKI material"] -.->|"certs"| DOCKER
+
+      style CMD fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+      style DOCKER fill:#0d1117,stroke:#3fb950,stroke-width:2px,color:#e6edf3
+      style K3S fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style HELM fill:#0d1117,stroke:#d29922,stroke-width:2px,color:#e6edf3
+      style SS fill:#b35900,stroke:#d29922,color:#fff
+      style SVC fill:#b35900,stroke:#d29922,color:#fff
+      style SA fill:#b35900,stroke:#d29922,color:#fff
+      style RBAC fill:#b35900,stroke:#d29922,color:#fff
+      style NP fill:#b35900,stroke:#d29922,color:#fff
+      style PKI fill:#238636,stroke:#3fb950,color:#fff
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="enforcement">
+  <h2>4. Enforcement Layers (Defense-in-Depth)</h2>
+  <p>
+    OpenShell applies five concentric security layers so that no single bypassed control grants full access.
+    All layers are configured from the same declarative YAML policy.
+  </p>
+
+  <div class="layer-card">
+    <h4><span class="num">1</span> Network Namespace Isolation</h4>
+    <p>
+      Each sandbox gets a dedicated Linux <code>netns</code> with a veth pair. The agent process
+      enters via <code>setns(CLONE_NEWNET)</code>. The only route out is through the host side of the
+      veth where the proxy listens. iptables rules <strong>REJECT</strong> any traffic not addressed to
+      the proxy, providing fast failure and kernel-level audit logging.
+    </p>
+  </div>
+
+  <div class="layer-card">
+    <h4><span class="num">2</span> seccomp (Syscall Filtering)</h4>
+    <p>
+      A BPF filter applied after <code>PR_SET_NO_NEW_PRIVS</code> blocks dangerous syscalls:
+      <code>memfd_create</code>, <code>ptrace</code>, <code>bpf</code>,
+      <code>mount</code>, <code>io_uring_setup</code>, <code>execveat(AT_EMPTY_PATH)</code>,
+      <code>unshare(CLONE_NEWUSER)</code>, and
+      <code>seccomp(SET_MODE_FILTER)</code>. Socket families
+      <code>AF_PACKET</code>, <code>AF_BLUETOOTH</code>, <code>AF_VSOCK</code>, <code>AF_NETLINK</code>
+      are blocked.
+    </p>
+  </div>
+
+  <div class="layer-card">
+    <h4><span class="num">3</span> Landlock (Filesystem Sandboxing)</h4>
+    <p>
+      Landlock LSM (ABI V2) creates a filesystem allowlist.
+      <code>read_only</code> paths get read access; <code>read_write</code> paths get full access.
+      Everything else is invisible. Applied via <code>restrict_self()</code>. If Landlock is unavailable,
+      the sandbox emits an OCSF high-severity finding and can either degrade or refuse to start.
+    </p>
+  </div>
+
+  <div class="layer-card">
+    <h4><span class="num">4</span> HTTP CONNECT Proxy + OPA (L4 Network Policy)</h4>
+    <p>
+      All TCP egress routes through a proxy on the host side of the veth. Each <code>CONNECT</code>
+      is evaluated by an embedded OPA engine (<code>regorus</code>). Rego policy
+      checks <strong>who</strong> (binary path, SHA256, ancestors), <strong>where</strong> (host, port),
+      and returns allow/deny/log.
+    </p>
+  </div>
+
+  <div class="layer-card">
+    <h4><span class="num">5</span> L7 Inspection (Application-Layer Policy)</h4>
+    <p>
+      For endpoints with <code>protocol</code> rules (REST, SQL, inference), the proxy terminates TLS
+      on the allowed tunnel and inspects HTTP method, path, and headers. Per-endpoint Rego rules
+      provide fine-grained control. Access presets simplify common patterns.
+    </p>
+  </div>
+
+  <h3>Enforcement Composition</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TD
+      AGENT["🤖 Agent Process"]
+      SETNS["1️⃣ setns — enter network namespace"]
+      SECCOMP["2️⃣ seccomp — BPF syscall filter"]
+      LANDLOCK["3️⃣ Landlock — filesystem allowlist"]
+      TCP["Agent opens TCP connection"]
+      IPTABLES{"iptables check"}
+      REJECT["❌ REJECT + LOG"]
+      PROXY["4️⃣ HTTP CONNECT Proxy"]
+      OPA{"OPA L4 evaluation"}
+      DENY["❌ Connection denied<br/>(OCSF event)"]
+      TLS["TLS termination (MITM)"]
+      L7{"5️⃣ L7 HTTP inspection"}
+      BLOCK["❌ Request blocked"]
+      UPSTREAM["✅ Upstream destination"]
+
+      AGENT --> SETNS --> SECCOMP --> LANDLOCK --> TCP
+      TCP --> IPTABLES
+      IPTABLES -->|"not to proxy"| REJECT
+      IPTABLES -->|"to proxy"| PROXY
+      PROXY --> OPA
+      OPA -->|"deny"| DENY
+      OPA -->|"allow"| TLS
+      TLS --> L7
+      L7 -->|"blocked"| BLOCK
+      L7 -->|"allowed"| UPSTREAM
+
+      style AGENT fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+      style SETNS fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style SECCOMP fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style LANDLOCK fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style TCP fill:#1c2333,stroke:#30363d,color:#e6edf3
+      style IPTABLES fill:#b35900,stroke:#d29922,color:#fff
+      style REJECT fill:#8b0000,stroke:#f85149,color:#fff
+      style PROXY fill:#238636,stroke:#3fb950,stroke-width:2px,color:#fff
+      style OPA fill:#b35900,stroke:#d29922,color:#fff
+      style DENY fill:#8b0000,stroke:#f85149,color:#fff
+      style TLS fill:#238636,stroke:#3fb950,color:#fff
+      style L7 fill:#b35900,stroke:#d29922,color:#fff
+      style BLOCK fill:#8b0000,stroke:#f85149,color:#fff
+      style UPSTREAM fill:#238636,stroke:#3fb950,stroke-width:2px,color:#fff
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Defense-in-Depth Guarantee:</strong> Even if the proxy is bypassed, iptables rejects the traffic.
+    Even if iptables is bypassed, seccomp blocks raw sockets. Even if seccomp is bypassed, Landlock
+    prevents writing to sensitive paths. No single layer failure grants full access.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="policy">
+  <h2>5. Policy System</h2>
+  <p>
+    Policy is declarative YAML that compiles to protobuf and Rego. It can originate from multiple
+    sources with clear precedence.
+  </p>
+
+  <h3>Policy Resolution Order</h3>
+  <table>
+    <thead><tr><th>Priority</th><th>Source</th><th>Mechanism</th></tr></thead>
+    <tbody>
+      <tr><td>1 (highest)</td><td>CLI flag</td><td><code>--policy ./file.yaml</code> or <code>--policy-rules</code> + <code>--policy-data</code></td></tr>
+      <tr><td>2</td><td>Environment variable</td><td><code>OPENSHELL_SANDBOX_POLICY=/path/to/policy.yaml</code></td></tr>
+      <tr><td>3</td><td>Gateway (global)</td><td>Set via <code>openshell policy set --global</code>, overrides per-sandbox</td></tr>
+      <tr><td>4</td><td>Gateway (per-sandbox)</td><td>Stored in persistence, pushed via <code>GetSandboxConfig</code> gRPC</td></tr>
+      <tr><td>5</td><td>Container image</td><td>Baked into <code>/etc/openshell/policy.yaml</code></td></tr>
+      <tr><td>6 (lowest)</td><td>Restrictive default</td><td>Deny-all fallback</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Policy Lifecycle</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph LR
+      YAML["📄 YAML File"] -->|"serde_yml parse"| PF["PolicyFile<br/>(Rust struct)"]
+      PF -->|"to_proto()"| SP["SandboxPolicy<br/>(protobuf)"]
+      SP --> OPA["OPA Engine<br/>(Rego rules + JSON data)"]
+      SP --> KERNEL["Kernel Controls<br/>(Landlock + seccomp)"]
+
+      HOTRELOAD["🔄 openshell policy set"] -->|"gRPC UpdateConfig"| GW["Gateway<br/>(persists revision)"]
+      GW -->|"poll: GetSandboxConfig"| RELOAD["Sandbox reloads<br/>OPA engine"]
+
+      style YAML fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style PF fill:#238636,stroke:#3fb950,color:#fff
+      style SP fill:#238636,stroke:#3fb950,color:#fff
+      style OPA fill:#b35900,stroke:#d29922,color:#fff
+      style KERNEL fill:#8b0000,stroke:#f85149,color:#fff
+      style HOTRELOAD fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style GW fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style RELOAD fill:#b35900,stroke:#d29922,color:#fff
+    </div>
+  </div>
+
+  <h3>Policy Scope</h3>
+  <div class="grid-2">
+    <div class="layer-card">
+      <h4>Network Rules (L4)</h4>
+      <p>Allow/deny by host, port, binary path, binary hash, ancestors. Supports wildcards and CIDR ranges. Actions: allow, deny, log.</p>
+    </div>
+    <div class="layer-card">
+      <h4>L7 / REST Rules</h4>
+      <p>Per-endpoint HTTP method + path patterns. Protocol types: rest, sql, inference. TLS auto-termination or skip.</p>
+    </div>
+    <div class="layer-card">
+      <h4>Filesystem Rules</h4>
+      <p>Landlock paths: <code>read_only</code> and <code>read_write</code> lists. Everything else is denied.</p>
+    </div>
+    <div class="layer-card">
+      <h4>Process Rules</h4>
+      <p>Entrypoint binary, user/group, environment variables, working directory, privilege settings.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="inference">
+  <h2>6. Inference Routing</h2>
+  <p>
+    Agents access LLM APIs through a single explicit endpoint: <code>https://inference.local</code>.
+    There is no implicit catch-all interception for arbitrary hosts. The operator configures the
+    backend; the agent never sees real credentials or model names.
+  </p>
+
+  <h3>How It Works</h3>
+  <div class="flow-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>Agent sends request</h4>
+      <p>Agent uses <code>base_url="https://inference.local/v1"</code> with any OpenAI-compatible client.
+         The <code>model</code> and <code>api_key</code> fields are placeholders &mdash; they're rewritten.</p>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>Proxy intercepts CONNECT</h4>
+      <p>The sandbox proxy recognizes <code>CONNECT inference.local:443</code>, responds <code>200 Connection Established</code>,
+         and enters the inference interception path (not the normal OPA CONNECT flow).</p>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>TLS termination + pattern detection</h4>
+      <p>Proxy terminates TLS (MITM with sandbox CA), parses the cleartext HTTP request, and classifies it
+         (e.g. <code>openai_chat_completions</code>, <code>anthropic_messages</code>). Unmatched paths get 403.</p>
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>Router resolves backend</h4>
+      <p><code>openshell-router</code> picks a <code>ResolvedRoute</code> from the cached inference bundle,
+         injects real credentials and model name, and streams the response back through the proxy.</p>
+    </div>
+  </div>
+
+  <h3>Inference Sequence</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    sequenceDiagram
+      participant A as 🤖 Agent
+      participant P as 🛡️ Sandbox Proxy
+      participant R as 🔀 Router
+      participant B as ☁️ LLM Backend
+
+      A->>P: CONNECT inference.local:443
+      P-->>A: 200 Connection Established
+
+      A->>P: TLS ClientHello
+      Note over P: Terminate TLS<br/>(sandbox CA)
+
+      A->>P: POST /v1/chat/completions
+      Note over P: Detect pattern:<br/>openai_chat_completions
+
+      P->>R: Match protocol to route
+      Note over R: Inject real auth<br/>+ model name
+
+      R->>B: Forward with real credentials
+      B-->>R: Streaming response
+      R-->>P: Streaming response
+      P-->>A: Re-chunked response
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <strong>Not transparent interception.</strong> Direct calls to <code>api.openai.com</code> or
+    <code>api.anthropic.com</code> are regular outbound traffic governed only by L4 network policy.
+    The inference router only activates for traffic explicitly aimed at <code>inference.local</code>.
+  </div>
+
+  <h3>Supported Inference Protocols</h3>
+  <table>
+    <thead><tr><th>Pattern</th><th>Endpoint</th></tr></thead>
+    <tbody>
+      <tr><td><code>openai_chat_completions</code></td><td><code>/v1/chat/completions</code></td></tr>
+      <tr><td><code>openai_completions</code></td><td><code>/v1/completions</code></td></tr>
+      <tr><td><code>openai_embeddings</code></td><td><code>/v1/embeddings</code></td></tr>
+      <tr><td><code>anthropic_messages</code></td><td><code>/v1/messages</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="providers">
+  <h2>7. Provider &amp; Credential System</h2>
+  <p>
+    Providers are pluggable credential backends. Each provider type knows which environment variables
+    hold credentials and how to discover them on the host.
+  </p>
+
+  <h3>Supported Providers</h3>
+  <table>
+    <thead><tr><th>Provider</th><th>Credential Variables</th></tr></thead>
+    <tbody>
+      <tr><td>Copilot (GitHub)</td><td><code>COPILOT_GITHUB_TOKEN</code>, <code>GH_TOKEN</code>, <code>GITHUB_TOKEN</code></td></tr>
+      <tr><td>Claude (Anthropic)</td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+      <tr><td>OpenAI</td><td><code>OPENAI_API_KEY</code></td></tr>
+      <tr><td>GitHub</td><td><code>GITHUB_TOKEN</code>, <code>GH_TOKEN</code></td></tr>
+      <tr><td>GitLab</td><td><code>GITLAB_TOKEN</code></td></tr>
+      <tr><td>NVIDIA</td><td><code>NVIDIA_API_KEY</code></td></tr>
+      <tr><td>Codex</td><td><code>OPENAI_API_KEY</code></td></tr>
+      <tr><td>Generic</td><td>User-defined key-value pairs</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Credential Injection Flow</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    sequenceDiagram
+      participant H as 🖥️ Host Env
+      participant G as 🌐 Gateway
+      participant S as 🛡️ Sandbox
+      participant A as 🤖 Agent
+      participant U as ☁️ Upstream API
+
+      H->>G: provider create --from-existing
+      Note over G: Store credentials<br/>(encrypted at rest)
+
+      S->>G: GetSandboxProviderEnv
+      G-->>S: {"GITHUB_TOKEN": "sk-real-..."}
+
+      Note over S: SecretResolver<br/>real → placeholder
+
+      S->>A: env GITHUB_TOKEN=<br/>"openshell:resolve:env:GITHUB_TOKEN"
+
+      A->>S: HTTP request with<br/>placeholder in Authorization header
+      Note over S: Proxy substitutes<br/>real credential on wire
+      S->>U: Request with real token
+      U-->>S: Response
+      S-->>A: Response
+    </div>
+  </div>
+
+  <div class="callout success">
+    <strong>Zero-knowledge agent design.</strong> The agent process never sees real credentials.
+    Placeholders in the environment are only resolved by the proxy at the network boundary,
+    so even a compromised agent cannot exfiltrate raw tokens.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="observability">
+  <h2>8. Observability (OCSF)</h2>
+  <p>
+    Security-relevant sandbox events are logged using the
+    <a href="https://schema.ocsf.io/" style="color:var(--accent)">OCSF v1.7.0</a> schema via the
+    <code>openshell-ocsf</code> crate. Events flow through tracing layers as both human-readable
+    shorthand and machine-parseable JSONL.
+  </p>
+
+  <h3>Event Classes</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TD
+      subgraph OCSF["OCSF v1.7.0 Event Model"]
+        direction TB
+        NA["🌐 Network Activity<br/><i>TCP allow/deny, tunnels</i>"]
+        HA["🔗 HTTP Activity<br/><i>Per-request L7 decisions</i>"]
+        SA["🔑 SSH Activity<br/><i>Auth, channel ops</i>"]
+        PA["⚙️ Process Activity<br/><i>Start/stop, signals</i>"]
+        DF["🔍 Detection Finding<br/><i>Nonce replay, bypass</i>"]
+        CS["📋 Config State Change<br/><i>Policy load, TLS setup</i>"]
+        AL["🚀 App Lifecycle<br/><i>Sandbox start, SSH ready</i>"]
+      end
+
+      subgraph OUTPUT["Output Layers"]
+        SH["Shorthand<br/>(human-readable)"]
+        JL["JSONL<br/>(machine-parseable)"]
+      end
+
+      NA --> SH
+      HA --> SH
+      SA --> SH
+      PA --> SH
+      DF --> SH
+      CS --> SH
+      AL --> SH
+      NA --> JL
+      HA --> JL
+      SA --> JL
+      PA --> JL
+      DF --> JL
+      CS --> JL
+      AL --> JL
+
+      style OCSF fill:#0d1117,stroke:#58a6ff,stroke-width:2px,color:#e6edf3
+      style OUTPUT fill:#0d1117,stroke:#3fb950,stroke-width:2px,color:#e6edf3
+      style NA fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style HA fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style SA fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style PA fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style DF fill:#8b0000,stroke:#f85149,color:#fff
+      style CS fill:#b35900,stroke:#d29922,color:#fff
+      style AL fill:#238636,stroke:#3fb950,color:#fff
+      style SH fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style JL fill:#6e40c9,stroke:#bc8cff,color:#fff
+    </div>
+  </div>
+
+  <h3>Severity Model</h3>
+  <table>
+    <thead><tr><th>Severity</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-blue">Informational</span></td><td>Allowed connections, successful ops, config loaded</td></tr>
+      <tr><td><span class="tag tag-green">Low</span></td><td>DNS failures, non-fatal warnings</td></tr>
+      <tr><td><span class="tag tag-orange">Medium</span></td><td>Denied connections, policy violations</td></tr>
+      <tr><td><span class="tag tag-red">High</span></td><td>Nonce replay, Landlock unavailable, security findings</td></tr>
+      <tr><td><span class="tag tag-purple">Critical</span></td><td>Process timeout kills</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="data-flow">
+  <h2>9. End-to-End Data Flow</h2>
+  <p>Complete lifecycle from sandbox creation to agent execution and policy enforcement.</p>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TD
+      USER["👤 User<br/><code>openshell sandbox create<br/>--provider copilot --policy p.yaml<br/>-- copilot</code>"]
+
+      USER --> CLI["CLI<br/>Parse policy YAML → proto"]
+      CLI -->|"gRPC CreateSandbox<br/>(policy + spec + providers)"| GW["🌐 Gateway"]
+
+      GW --> PERSIST["Persist sandbox +<br/>policy in SQLite/PG"]
+      GW --> RESOLVE["Resolve provider<br/>credentials"]
+      GW --> K8S["Create K8s Pod spec"]
+      K8S -->|"K8s API"| POD["🟢 Sandbox Pod boots"]
+
+      POD --> FETCH_P["Fetch policy<br/>(GetSandboxConfig)"]
+      POD --> FETCH_C["Fetch credentials<br/>(GetSandboxProviderEnv)"]
+
+      FETCH_P --> OPA_LOAD["Load OPA engine"]
+      FETCH_C --> SECRETS["SecretResolver<br/>real → placeholders"]
+
+      OPA_LOAD --> APPLY["Apply kernel controls"]
+      APPLY --> LANDLOCK_A["Landlock restrict_self()"]
+      APPLY --> SECCOMP_A["seccomp BPF filter"]
+      APPLY --> NETNS_A["Create netns + veth"]
+      APPLY --> PROXY_A["Start CONNECT proxy"]
+
+      SECRETS --> SPAWN
+      PROXY_A --> SPAWN["🤖 Spawn agent process<br/>(setns → isolated netns)"]
+
+      SPAWN --> NET_REQ["CONNECT api.github.com<br/>→ OPA L4 → allow/deny"]
+      SPAWN --> INF_REQ["CONNECT inference.local<br/>→ Router → LLM backend"]
+      SPAWN --> FS_REQ["File access<br/>→ Landlock allow/deny"]
+      SPAWN --> SYS_REQ["Syscall<br/>→ seccomp allow/EPERM"]
+
+      SPAWN -->|"SSH tunnel"| OUTPUT["👤 User sees agent output"]
+
+      style USER fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+      style CLI fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style GW fill:#1f6feb,stroke:#58a6ff,stroke-width:2px,color:#fff
+      style PERSIST fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style RESOLVE fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style K8S fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style POD fill:#238636,stroke:#3fb950,stroke-width:2px,color:#fff
+      style FETCH_P fill:#238636,stroke:#3fb950,color:#fff
+      style FETCH_C fill:#238636,stroke:#3fb950,color:#fff
+      style OPA_LOAD fill:#b35900,stroke:#d29922,color:#fff
+      style SECRETS fill:#b35900,stroke:#d29922,color:#fff
+      style APPLY fill:#8b0000,stroke:#f85149,stroke-width:2px,color:#fff
+      style LANDLOCK_A fill:#8b0000,stroke:#f85149,color:#fff
+      style SECCOMP_A fill:#8b0000,stroke:#f85149,color:#fff
+      style NETNS_A fill:#8b0000,stroke:#f85149,color:#fff
+      style PROXY_A fill:#8b0000,stroke:#f85149,color:#fff
+      style SPAWN fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+      style NET_REQ fill:#1c2333,stroke:#58a6ff,color:#e6edf3
+      style INF_REQ fill:#1c2333,stroke:#3fb950,color:#e6edf3
+      style FS_REQ fill:#1c2333,stroke:#d29922,color:#e6edf3
+      style SYS_REQ fill:#1c2333,stroke:#f85149,color:#e6edf3
+      style OUTPUT fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="modes">
+  <h2>10. Network Modes</h2>
+  <p>
+    The <code>network_mode</code> field in policy controls the strictness of network enforcement.
+  </p>
+
+  <table>
+    <thead><tr><th>Mode</th><th>seccomp INET</th><th>Proxy</th><th>OPA</th><th>L7</th><th>Use Case</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-red">Block</span></td>
+        <td>Denied</td>
+        <td>N/A</td>
+        <td>N/A</td>
+        <td>N/A</td>
+        <td>Air-gapped, no network at all</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-orange">Proxy</span> (default)</td>
+        <td>Allowed (to proxy only)</td>
+        <td>Active</td>
+        <td>Active</td>
+        <td>If configured</td>
+        <td>Standard sandboxing with policy</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-green">Allow</span></td>
+        <td>No filter</td>
+        <td>Inactive</td>
+        <td>Inactive</td>
+        <td>Inactive</td>
+        <td>Trusted workloads, testing</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Mode Comparison</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph LR
+      subgraph BLOCK["🔴 Block Mode"]
+        direction TB
+        B_SEC["seccomp: deny INET"]
+        B_RES["Result: zero network"]
+      end
+
+      subgraph PROXY["🟠 Proxy Mode (default)"]
+        direction TB
+        P_NS["netns isolation"]
+        P_IPT["iptables enforcement"]
+        P_PRX["CONNECT proxy"]
+        P_OPA["OPA policy eval"]
+        P_L7["L7 inspection"]
+        P_NS --> P_IPT --> P_PRX --> P_OPA --> P_L7
+      end
+
+      subgraph ALLOW["🟢 Allow Mode"]
+        direction TB
+        A_NONE["No network filter"]
+        A_RES["Result: unrestricted"]
+      end
+
+      style BLOCK fill:#0d1117,stroke:#f85149,stroke-width:2px,color:#e6edf3
+      style PROXY fill:#0d1117,stroke:#d29922,stroke-width:2px,color:#e6edf3
+      style ALLOW fill:#0d1117,stroke:#3fb950,stroke-width:2px,color:#e6edf3
+      style B_SEC fill:#8b0000,stroke:#f85149,color:#fff
+      style B_RES fill:#8b0000,stroke:#f85149,color:#fff
+      style P_NS fill:#b35900,stroke:#d29922,color:#fff
+      style P_IPT fill:#b35900,stroke:#d29922,color:#fff
+      style P_PRX fill:#b35900,stroke:#d29922,color:#fff
+      style P_OPA fill:#b35900,stroke:#d29922,color:#fff
+      style P_L7 fill:#b35900,stroke:#d29922,color:#fff
+      style A_NONE fill:#238636,stroke:#3fb950,color:#fff
+      style A_RES fill:#238636,stroke:#3fb950,color:#fff
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Proxy mode</strong> is the recommended default. It provides the full defense-in-depth stack:
+    netns isolation → iptables enforcement → proxy evaluation → OPA policy → optional L7 inspection.
+    The other modes exist for specific operational needs (air-gap or trusted environments).
+  </div>
+</section>
+
+</div>
+
+<footer>
+  NVIDIA OpenShell &mdash; Technical Design Document &mdash; Generated April 2026
+</footer>
+
+</body>
+</html>
