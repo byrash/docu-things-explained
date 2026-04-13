@@ -1327,17 +1327,89 @@
         <td><span class="tag tag-green">Yes</span> Seatbelt</td>
         <td><span class="tag tag-purple">Cloud</span></td>
       </tr>
-      <!-- Row: License -->
+      <!-- Row: Open Source -->
       <tr>
-        <td><strong>License</strong></td>
-        <td>Apache 2.0</td>
-        <td>Apache 2.0</td>
-        <td>Proprietary (SaaS)</td>
-        <td>Apache 2.0 + SaaS</td>
-        <td>Apache 2.0</td>
-        <td>MIT</td>
-        <td>Apache 2.0</td>
-        <td>Proprietary (SaaS)</td>
+        <td><strong>Open Source</strong></td>
+        <td><span class="tag tag-green">Yes</span><br/>Apache 2.0</td>
+        <td><span class="tag tag-green">Yes</span><br/>Apache 2.0</td>
+        <td><span class="tag tag-red">No</span><br/>Proprietary SaaS</td>
+        <td><span class="tag tag-orange">Partial</span><br/>Apache 2.0 core + proprietary SaaS</td>
+        <td><span class="tag tag-green">Yes</span><br/>Apache 2.0</td>
+        <td><span class="tag tag-green">Yes</span><br/>MIT</td>
+        <td><span class="tag tag-green">Yes</span><br/>Apache 2.0</td>
+        <td><span class="tag tag-red">No</span><br/>Proprietary SaaS</td>
+      </tr>
+      <!-- Row: GitHub Repo -->
+      <tr>
+        <td><strong>GitHub Repo</strong></td>
+        <td><a href="https://github.com/NVIDIA/OpenShell" style="color:var(--accent)">NVIDIA/OpenShell</a></td>
+        <td><a href="https://github.com/anthropic-experimental/sandbox-runtime" style="color:var(--accent)">anthropic-experimental/<br/>sandbox-runtime</a></td>
+        <td><a href="https://github.com/e2b-dev/E2B" style="color:var(--accent)">e2b-dev/E2B</a></td>
+        <td><a href="https://github.com/daytonaio/daytona" style="color:var(--accent)">daytonaio/daytona</a></td>
+        <td><a href="https://github.com/microsandbox/microsandbox" style="color:var(--accent)">microsandbox/<br/>microsandbox</a></td>
+        <td><a href="https://github.com/noperator/membrane" style="color:var(--accent)">noperator/membrane</a></td>
+        <td><a href="https://github.com/always-further/nono" style="color:var(--accent)">always-further/nono</a></td>
+        <td>Closed source</td>
+      </tr>
+      <!-- Row: GitHub Stars -->
+      <tr>
+        <td><strong>GitHub Stars</strong></td>
+        <td>~4.6k</td>
+        <td>~3.7k</td>
+        <td>~11.6k</td>
+        <td>~71k</td>
+        <td>~5.2k</td>
+        <td>~39 (new)</td>
+        <td>~1.5k</td>
+        <td>N/A</td>
+      </tr>
+      <!-- Row: Contributors -->
+      <tr>
+        <td><strong>Contributors</strong></td>
+        <td>30</td>
+        <td>30</td>
+        <td>50</td>
+        <td>100+</td>
+        <td>~15</td>
+        <td>1 (solo)</td>
+        <td>30</td>
+        <td>N/A</td>
+      </tr>
+      <!-- Row: Primary Language -->
+      <tr>
+        <td><strong>Primary Language</strong></td>
+        <td>Rust (89%)</td>
+        <td>TypeScript</td>
+        <td>Python / Go</td>
+        <td>TypeScript / Go</td>
+        <td>Rust</td>
+        <td>Go (74%)</td>
+        <td>Rust</td>
+        <td>Python</td>
+      </tr>
+      <!-- Row: Backed By -->
+      <tr>
+        <td><strong>Backed By</strong></td>
+        <td>NVIDIA</td>
+        <td>Anthropic</td>
+        <td>VC-funded startup</td>
+        <td>VC-funded startup</td>
+        <td>Zerocore AI<br/>(YC X26)</td>
+        <td>Independent<br/>(solo dev)</td>
+        <td>Luke Hinds<br/>(Sigstore creator)</td>
+        <td>Modal Labs<br/>(VC-funded)</td>
+      </tr>
+      <!-- Row: Self-Hostable -->
+      <tr>
+        <td><strong>Fully Self-Hostable</strong></td>
+        <td><span class="tag tag-green">Yes</span><br/>All components</td>
+        <td><span class="tag tag-green">Yes</span><br/>Local binary</td>
+        <td><span class="tag tag-red">No</span><br/>Cloud-only</td>
+        <td><span class="tag tag-orange">Partial</span><br/>OSS core, cloud features locked</td>
+        <td><span class="tag tag-green">Yes</span><br/>All components</td>
+        <td><span class="tag tag-green">Yes</span><br/>Docker-based</td>
+        <td><span class="tag tag-green">Yes</span><br/>Single binary</td>
+        <td><span class="tag tag-red">No</span><br/>Cloud-only</td>
       </tr>
       <!-- Row: Maturity -->
       <tr>
@@ -1501,6 +1573,144 @@
     Other solutions optimize for either raw isolation strength (microVMs) or setup simplicity (process wrappers),
     but none offer the same granularity of runtime policy control. The trade-off is operational complexity
     and startup latency from the K8s layer.
+  </div>
+
+  <h3>Reddit &amp; Community Sentiment (Apr 2026)</h3>
+  <p>
+    Based on discussions across r/ClaudeAI, r/ClaudeCode, r/LocalLLaMA, r/opencodeCLI, HuggingFace, and tech blogs.
+    Note: this space is moving fast &mdash; most tools are &lt;12 months old. Community signal is sparse for newer entrants.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="min-width:120px;">Tool</th>
+        <th style="min-width:100px;">Community Buzz</th>
+        <th>What Users Say</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>E2B</strong></td>
+        <td><span class="tag tag-green">High</span></td>
+        <td>
+          Most widely adopted as backend infra. Praised for speed (~150ms boot) and reliability.
+          Used by developers building workshop tools, MCP integrations, and SaaS products.
+          r/LocalLLaMA consensus: <em>"ephemeral sandboxes should be the default, not the exception."</em>
+          Criticism: no network policy &mdash; it's all-or-nothing internet access.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Daytona</strong></td>
+        <td><span class="tag tag-green">High</span></td>
+        <td>
+          71k GitHub stars make it the most-starred project in the space. Primarily discussed as a dev environment
+          platform rather than a pure security sandbox. Users praise persistent state and Computer Use support.
+          Still adding network policy features (DNS-based allowlists requested via GitHub issue, not yet shipped).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Anthropic SRT</strong></td>
+        <td><span class="tag tag-orange">Medium</span></td>
+        <td>
+          Integrated into Claude Code as <code>/sandbox</code> command (since v1.0.29). Anthropic claims
+          84% fewer permission prompts with auto-allow mode. r/ClaudeCode users report mixed results:
+          <em>"sandbox mode didn't help &mdash; still asks permission for simple bash commands."</em>
+          Known escape hatch (<code>dangerouslyDisableSandbox</code> param) undermines trust model.
+          Blog reviewers call it lightweight but lacking advanced controls.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Nono</strong></td>
+        <td><span class="tag tag-orange">Medium</span></td>
+        <td>
+          Created by Luke Hinds (Sigstore creator) &mdash; credibility in security community.
+          Featured on HuggingFace blog. Praised for zero-setup, kernel enforcement with no escape hatch.
+          r/ClaudeAI thread <em>"How are you sandboxing your AI coding agents?"</em> surfaces nono
+          alongside Docker and copy-on-write overlays as the main approaches.
+          Limitation: no network filtering at all.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Membrane</strong></td>
+        <td><span class="tag tag-red">Low</span></td>
+        <td>
+          Very new (39 GitHub stars), solo developer project. Technically praised in reviews
+          (<em>"best balance of security and simplicity"</em> &mdash; Awesome Agents).
+          eBPF monitoring is unique differentiator but lacks community traction yet.
+          DNS-based network control is more practical than most alternatives.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Microsandbox</strong></td>
+        <td><span class="tag tag-orange">Medium</span></td>
+        <td>
+          YC X26 batch gives visibility. 5.2k stars. Credential injection design praised in tech blogs
+          as similar to OpenShell's zero-knowledge approach but lighter weight.
+          Still in beta with breaking changes expected. Limited Reddit discussion.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>NVIDIA OpenShell</strong></td>
+        <td><span class="tag tag-orange">Medium</span></td>
+        <td>
+          Covered by Awesome Agents and NewClawTimes as <em>"the sandbox AI agents should have had."</em>
+          Enterprise partnerships announced (Adobe, Atlassian, Cisco) but not yet shipped.
+          Community recognizes deepest policy enforcement but flags K8s overhead as barrier to adoption.
+          Alpha status limits hands-on user reviews. 4.6k stars for a March 2026 launch is solid traction.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Modal</strong></td>
+        <td><span class="tag tag-green">High</span></td>
+        <td>
+          Dominant in GPU/ML space. Not typically discussed as a security sandbox &mdash; more as a
+          serverless compute platform. Python developers praise DX. Not really compared to the others
+          in security-focused discussions.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Top Reddit Themes (2026)</h3>
+  <div class="grid-2">
+    <div class="layer-card">
+      <h4>"Permission fatigue is the real problem"</h4>
+      <p>
+        r/ClaudeCode users report that constant approve/confirm dialogs kill productivity more than security
+        concerns. Sandboxes that reduce prompts (SRT auto-allow, <code>--dangerously-skip-permissions</code>
+        in VMs) are popular despite weaker security models.
+      </p>
+    </div>
+    <div class="layer-card">
+      <h4>"Ephemeral should be the default"</h4>
+      <p>
+        r/LocalLLaMA consensus: agent code execution in ephemeral sandboxes should be standard, not optional.
+        Users running agents on their host systems are viewed as taking unnecessary risk.
+      </p>
+    </div>
+    <div class="layer-card">
+      <h4>"Copy-on-write is underrated"</h4>
+      <p>
+        Multiple Reddit users build custom overlay/snapshot tools that let agents work freely but
+        require human review before changes hit the real filesystem. This pattern isn't offered by
+        any major sandbox tool except Nono (snapshot/rollback).
+      </p>
+    </div>
+    <div class="layer-card">
+      <h4>"Most devs don't sandbox at all"</h4>
+      <p>
+        The majority of Reddit users discussing coding agents don't use any sandbox. Those who do are
+        a vocal minority. The biggest adoption blocker across all tools is setup friction, not missing features.
+      </p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <strong>Caveat on stars &amp; sentiment:</strong> GitHub stars reflect marketing reach as much as usage.
+    Daytona (71k) pivoted from dev environments to AI sandboxes &mdash; many stars predate the sandbox pivot.
+    E2B (11.6k) has the strongest <em>verified usage</em> metric (200M+ sandbox sessions).
+    Reddit discussion is skewed toward Claude Code users; other agent ecosystems are underrepresented.
   </div>
 </section>
 
