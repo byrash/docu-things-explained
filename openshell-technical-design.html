@@ -1111,6 +1111,399 @@
   </div>
 </section>
 
+<!-- ============================================================ -->
+<section id="landscape">
+  <h2>11. Competitive Landscape — AI Agent Sandboxing (2026)</h2>
+  <p>
+    The AI agent sandboxing market has 13+ platforms as of mid-2026, spanning cloud-hosted ephemeral
+    environments, local-first tools, and enterprise infrastructure. They differ fundamentally in
+    isolation technology, policy model, and deployment philosophy.
+  </p>
+
+  <h3>Market Map</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    quadrantChart
+      title Sandbox Landscape: Security Depth vs Setup Simplicity
+      x-axis "Heavy Setup" --> "Zero Setup"
+      y-axis "Basic Isolation" --> "Deep Policy Enforcement"
+      quadrant-1 "Sweet spot for most"
+      quadrant-2 "Enterprise / Infra teams"
+      quadrant-3 "Legacy / Niche"
+      quadrant-4 "Quick & light"
+      "NVIDIA OpenShell": [0.15, 0.95]
+      "Anthropic SRT": [0.75, 0.35]
+      "E2B": [0.70, 0.55]
+      "Daytona": [0.65, 0.50]
+      "Microsandbox": [0.55, 0.65]
+      "Membrane": [0.80, 0.60]
+      "Nono": [0.90, 0.45]
+      "Modal": [0.60, 0.40]
+    </div>
+  </div>
+
+  <h3>Full Comparison Matrix</h3>
+  <div style="overflow-x:auto;">
+  <table style="min-width:1100px;">
+    <thead>
+      <tr>
+        <th style="min-width:130px;">Feature</th>
+        <th style="min-width:130px;">NVIDIA OpenShell</th>
+        <th style="min-width:120px;">Anthropic SRT</th>
+        <th style="min-width:100px;">E2B</th>
+        <th style="min-width:100px;">Daytona</th>
+        <th style="min-width:115px;">Microsandbox</th>
+        <th style="min-width:100px;">Membrane</th>
+        <th style="min-width:90px;">Nono</th>
+        <th style="min-width:90px;">Modal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Row: Isolation -->
+      <tr>
+        <td><strong>Isolation Tech</strong></td>
+        <td>K8s pods + netns + Landlock + seccomp</td>
+        <td>bubblewrap (Linux) / sandbox-exec (macOS)</td>
+        <td>Firecracker microVM (KVM)</td>
+        <td>Docker containers + namespaces</td>
+        <td>libkrun microVM (KVM / Hypervisor.framework)</td>
+        <td>Docker + eBPF sidecar (Tracee)</td>
+        <td>Landlock (Linux) / Seatbelt (macOS)</td>
+        <td>gVisor / Firecracker</td>
+      </tr>
+      <!-- Row: Deployment -->
+      <tr>
+        <td><strong>Deployment</strong></td>
+        <td><span class="tag tag-blue">Self-hosted</span><br/>Docker + K3s</td>
+        <td><span class="tag tag-green">Local</span><br/>npm install</td>
+        <td><span class="tag tag-purple">Cloud</span><br/>SaaS API</td>
+        <td><span class="tag tag-purple">Cloud</span><br/>SaaS API</td>
+        <td><span class="tag tag-green">Local</span><br/>binary + libkrun</td>
+        <td><span class="tag tag-green">Local</span><br/>Docker required</td>
+        <td><span class="tag tag-green">Local</span><br/>single binary</td>
+        <td><span class="tag tag-purple">Cloud</span><br/>SaaS API</td>
+      </tr>
+      <!-- Row: Startup Time -->
+      <tr>
+        <td><strong>Startup Time</strong></td>
+        <td>~seconds (K3s pod scheduling)</td>
+        <td>~instant (process wrapper)</td>
+        <td>~150ms (Firecracker boot)</td>
+        <td>~90ms (fastest cloud)</td>
+        <td>&lt;200ms (microVM)</td>
+        <td>~500ms (Docker start)</td>
+        <td>~0ms (kernel sandbox)</td>
+        <td>Sub-second</td>
+      </tr>
+      <!-- Row: Network Policy -->
+      <tr>
+        <td><strong>Network Policy</strong></td>
+        <td><span class="tag tag-green">Deep</span><br/>OPA/Rego L4+L7, per-binary, ancestors, hash</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Domain allowlist via proxy</td>
+        <td><span class="tag tag-red">None</span><br/>Full internet or none</td>
+        <td><span class="tag tag-orange">Basic</span><br/>CIDR-based (DNS requested)</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Host allowlist</td>
+        <td><span class="tag tag-green">Good</span><br/>DNS-based allowlist, auto-refresh</td>
+        <td><span class="tag tag-red">None</span><br/>No network filtering</td>
+        <td><span class="tag tag-red">None</span><br/>Full internet access</td>
+      </tr>
+      <!-- Row: Filesystem Policy -->
+      <tr>
+        <td><strong>Filesystem Policy</strong></td>
+        <td><span class="tag tag-green">Deep</span><br/>Landlock LSM read/write allowlist</td>
+        <td><span class="tag tag-green">Good</span><br/>bubblewrap bind mounts / Seatbelt profiles</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Ephemeral VM filesystem</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Union FS with R/O base</td>
+        <td><span class="tag tag-orange">Basic</span><br/>VM-level isolation</td>
+        <td><span class="tag tag-green">Good</span><br/>Pattern-based shadow + R/O mounts</td>
+        <td><span class="tag tag-green">Good</span><br/>Landlock + auto-blocklist (~/.ssh, etc.)</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Ephemeral container FS</td>
+      </tr>
+      <!-- Row: Syscall Filtering -->
+      <tr>
+        <td><strong>Syscall Filtering</strong></td>
+        <td><span class="tag tag-green">Yes</span> seccomp BPF, targeted blocks</td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-green">Yes</span> KVM hardware boundary</td>
+        <td><span class="tag tag-orange">Partial</span> dropped capabilities</td>
+        <td><span class="tag tag-green">Yes</span> KVM hardware boundary</td>
+        <td><span class="tag tag-red">No</span> (eBPF monitors, doesn't block)</td>
+        <td><span class="tag tag-green">Yes</span> seccomp + SECCOMP_RET_USER_NOTIF</td>
+        <td><span class="tag tag-green">Yes</span> gVisor syscall interception</td>
+      </tr>
+      <!-- Row: Credential Protection -->
+      <tr>
+        <td><strong>Credential Protection</strong></td>
+        <td><span class="tag tag-green">Strong</span><br/>Placeholder injection, proxy substitutes on wire</td>
+        <td><span class="tag tag-red">None</span><br/>Manual env management</td>
+        <td><span class="tag tag-red">None</span><br/>Passed directly to VM</td>
+        <td><span class="tag tag-red">None</span><br/>Passed as env vars</td>
+        <td><span class="tag tag-green">Strong</span><br/>Placeholder injection, host-only resolution</td>
+        <td><span class="tag tag-orange">Partial</span><br/>.env files shadowed read-only</td>
+        <td><span class="tag tag-orange">Partial</span><br/>Auto-blocks sensitive paths</td>
+        <td><span class="tag tag-red">None</span><br/>Standard env injection</td>
+      </tr>
+      <!-- Row: Inference Routing -->
+      <tr>
+        <td><strong>Inference / LLM Routing</strong></td>
+        <td><span class="tag tag-green">Built-in</span><br/>inference.local, privacy router, credential rewrite</td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-red">None</span></td>
+        <td><span class="tag tag-orange">Partial</span><br/>GPU routing for ML workloads</td>
+      </tr>
+      <!-- Row: L7 Inspection -->
+      <tr>
+        <td><strong>L7 HTTP Inspection</strong></td>
+        <td><span class="tag tag-green">Yes</span> TLS MITM, method/path rules per-endpoint</td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+      </tr>
+      <!-- Row: Policy Language -->
+      <tr>
+        <td><strong>Policy Language</strong></td>
+        <td>YAML + Rego (OPA), hot-reloadable</td>
+        <td>CLI flags / JSON config</td>
+        <td>API params (SDK)</td>
+        <td>API params (SDK)</td>
+        <td>TOML config</td>
+        <td>YAML config</td>
+        <td>CLI flags</td>
+        <td>Python decorators</td>
+      </tr>
+      <!-- Row: Observability -->
+      <tr>
+        <td><strong>Observability</strong></td>
+        <td><span class="tag tag-green">Deep</span><br/>OCSF v1.7.0, 7 event classes, JSONL export</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Violation log (macOS only)</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Sandbox metrics API</td>
+        <td><span class="tag tag-orange">Basic</span><br/>Logs + metrics</td>
+        <td><span class="tag tag-orange">Basic</span><br/>VM stdout/stderr</td>
+        <td><span class="tag tag-green">Good</span><br/>eBPF traces, compressed JSONL</td>
+        <td><span class="tag tag-red">Minimal</span></td>
+        <td><span class="tag tag-orange">Basic</span><br/>Dashboard metrics</td>
+      </tr>
+      <!-- Row: Multi-agent -->
+      <tr>
+        <td><strong>Multi-Agent / Multi-Tenant</strong></td>
+        <td><span class="tag tag-green">Yes</span> K8s pods, per-sandbox policy</td>
+        <td><span class="tag tag-red">No</span> single-process</td>
+        <td><span class="tag tag-green">Yes</span> cloud-managed isolation</td>
+        <td><span class="tag tag-green">Yes</span> cloud-managed isolation</td>
+        <td><span class="tag tag-orange">Limited</span> multiple VMs</td>
+        <td><span class="tag tag-orange">Limited</span> Docker containers</td>
+        <td><span class="tag tag-red">No</span> single-process</td>
+        <td><span class="tag tag-green">Yes</span> cloud-managed</td>
+      </tr>
+      <!-- Row: GPU -->
+      <tr>
+        <td><strong>GPU Support</strong></td>
+        <td><span class="tag tag-green">Yes</span> NVIDIA device plugin</td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-green">Yes</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-red">No</span></td>
+        <td><span class="tag tag-green">Yes</span> (market leader)</td>
+      </tr>
+      <!-- Row: macOS -->
+      <tr>
+        <td><strong>macOS Native</strong></td>
+        <td><span class="tag tag-orange">Via Docker</span></td>
+        <td><span class="tag tag-green">Yes</span> Seatbelt</td>
+        <td><span class="tag tag-purple">Cloud</span></td>
+        <td><span class="tag tag-purple">Cloud</span></td>
+        <td><span class="tag tag-green">Yes</span> Hypervisor.framework</td>
+        <td><span class="tag tag-orange">Via Docker</span></td>
+        <td><span class="tag tag-green">Yes</span> Seatbelt</td>
+        <td><span class="tag tag-purple">Cloud</span></td>
+      </tr>
+      <!-- Row: License -->
+      <tr>
+        <td><strong>License</strong></td>
+        <td>Apache 2.0</td>
+        <td>Apache 2.0</td>
+        <td>Proprietary (SaaS)</td>
+        <td>Apache 2.0 + SaaS</td>
+        <td>Apache 2.0</td>
+        <td>MIT</td>
+        <td>Apache 2.0</td>
+        <td>Proprietary (SaaS)</td>
+      </tr>
+      <!-- Row: Maturity -->
+      <tr>
+        <td><strong>Maturity (Apr 2026)</strong></td>
+        <td><span class="tag tag-orange">Alpha</span></td>
+        <td><span class="tag tag-orange">Beta</span></td>
+        <td><span class="tag tag-green">Production</span><br/>200M+ sandboxes</td>
+        <td><span class="tag tag-green">Production</span></td>
+        <td><span class="tag tag-orange">Beta</span></td>
+        <td><span class="tag tag-orange">Beta</span></td>
+        <td><span class="tag tag-orange">Beta</span></td>
+        <td><span class="tag tag-green">Production</span></td>
+      </tr>
+      <!-- Row: Pricing -->
+      <tr>
+        <td><strong>Pricing</strong></td>
+        <td>Free (self-hosted)</td>
+        <td>Free (open source)</td>
+        <td>~$0.08/hr per sandbox</td>
+        <td>~$0.08/hr per sandbox</td>
+        <td>Free (open source)</td>
+        <td>Free (open source)</td>
+        <td>Free (open source)</td>
+        <td>Pay-per-use (GPU pricing)</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Architecture Comparison</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph TB
+      subgraph VM["🔒 Hardware Isolation (MicroVM)"]
+        direction TB
+        E2B_A["E2B<br/><i>Firecracker, cloud</i>"]
+        MICRO_A["Microsandbox<br/><i>libkrun, local</i>"]
+        MODAL_A["Modal<br/><i>gVisor/Firecracker, GPU</i>"]
+      end
+
+      subgraph KUBE["☸️ Kubernetes + Kernel Hardening"]
+        direction TB
+        OS_A["OpenShell<br/><i>K3s + Landlock + seccomp<br/>+ OPA + L7</i>"]
+      end
+
+      subgraph CONTAINER["🐳 Container Isolation"]
+        direction TB
+        DAY_A["Daytona<br/><i>Docker + namespaces</i>"]
+        MEM_A["Membrane<br/><i>Docker + eBPF monitor</i>"]
+      end
+
+      subgraph PROCESS["⚡ Process-Level Sandboxing"]
+        direction TB
+        SRT_A["Anthropic SRT<br/><i>bubblewrap / Seatbelt</i>"]
+        NONO_A["Nono<br/><i>Landlock / Seatbelt</i>"]
+      end
+
+      style VM fill:#0d1117,stroke:#58a6ff,stroke-width:2px,color:#e6edf3
+      style KUBE fill:#0d1117,stroke:#3fb950,stroke-width:2px,color:#e6edf3
+      style CONTAINER fill:#0d1117,stroke:#d29922,stroke-width:2px,color:#e6edf3
+      style PROCESS fill:#0d1117,stroke:#bc8cff,stroke-width:2px,color:#e6edf3
+      style E2B_A fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style MICRO_A fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style MODAL_A fill:#1f6feb,stroke:#58a6ff,color:#fff
+      style OS_A fill:#238636,stroke:#3fb950,color:#fff
+      style DAY_A fill:#b35900,stroke:#d29922,color:#fff
+      style MEM_A fill:#b35900,stroke:#d29922,color:#fff
+      style SRT_A fill:#6e40c9,stroke:#bc8cff,color:#fff
+      style NONO_A fill:#6e40c9,stroke:#bc8cff,color:#fff
+    </div>
+  </div>
+
+  <h3>Where OpenShell Stands Out</h3>
+  <div class="grid-2">
+    <div class="layer-card" style="border-color: var(--green);">
+      <h4 style="color:var(--green);">Strengths</h4>
+      <p>
+        <strong>Deepest policy enforcement</strong> — only solution with OPA/Rego L4+L7 policy, per-binary network rules, and hot-reloadable policies. Only one with built-in inference routing and privacy-aware credential rewriting. OCSF-grade observability. GPU support via NVIDIA device plugin. Self-hosted = no vendor lock-in or per-sandbox cloud fees.
+      </p>
+    </div>
+    <div class="layer-card" style="border-color: var(--red);">
+      <h4 style="color:var(--red);">Weaknesses</h4>
+      <p>
+        <strong>Heaviest setup</strong> — requires Docker + embedded K3s. Slowest sandbox creation (pod scheduling vs. sub-second VM boot). Alpha maturity. Not natively macOS (runs via Docker). K8s complexity is overkill for single-agent, single-developer workflows.
+      </p>
+    </div>
+  </div>
+
+  <h3>When to Use What</h3>
+  <table>
+    <thead><tr><th>Scenario</th><th>Best Fit</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Enterprise with compliance requirements, audit trail, fine-grained network+API policy</td>
+        <td><strong>OpenShell</strong></td>
+        <td>Only solution with OCSF logging, L7 inspection, Rego policy, credential zero-knowledge</td>
+      </tr>
+      <tr>
+        <td>Cloud-hosted, high-volume ephemeral sandboxes (SaaS product)</td>
+        <td><strong>E2B</strong></td>
+        <td>Market leader (200M+ sandboxes), Firecracker isolation, proven at Fortune 500 scale</td>
+      </tr>
+      <tr>
+        <td>Fastest cloud sandbox creation with Computer Use (browser/desktop)</td>
+        <td><strong>Daytona</strong></td>
+        <td>90ms creation, persistent state, Computer Use support, GPU available</td>
+      </tr>
+      <tr>
+        <td>Local development, wrapping a single agent (Claude Code, Copilot, etc.)</td>
+        <td><strong>Nono</strong> or <strong>Anthropic SRT</strong></td>
+        <td>Zero setup, instant start, macOS native. SRT has network filtering; Nono has deeper syscall control</td>
+      </tr>
+      <tr>
+        <td>Local sandbox with network visibility and DNS control</td>
+        <td><strong>Membrane</strong></td>
+        <td>Best balance of security + simplicity. eBPF tracing. DNS allowlist without K8s overhead</td>
+      </tr>
+      <tr>
+        <td>Local-first with hardware isolation + credential protection (no cloud)</td>
+        <td><strong>Microsandbox</strong></td>
+        <td>libkrun microVM isolation, credential injection design similar to OpenShell but lighter</td>
+      </tr>
+      <tr>
+        <td>GPU-heavy ML / inference workloads</td>
+        <td><strong>Modal</strong></td>
+        <td>Clear GPU leader, Python-native, pay-per-use with fast autoscaling</td>
+      </tr>
+      <tr>
+        <td>Ultra-high volume, sub-millisecond spawn (100k+ concurrent)</td>
+        <td><strong>Zeroboot</strong></td>
+        <td>0.79ms spawn via Firecracker snapshots (190x faster than E2B)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Isolation Technology Spectrum</h3>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+    graph LR
+      subgraph SPECTRUM[" "]
+        direction LR
+        L1["Process Sandbox<br/><b>Nono, SRT</b><br/><i>~0ms startup</i><br/><i>Weakest isolation</i>"]
+        L2["Hardened Container<br/><b>Membrane, Daytona</b><br/><i>~100-500ms</i><br/><i>Moderate isolation</i>"]
+        L3["K8s + Kernel Hardening<br/><b>OpenShell</b><br/><i>~seconds</i><br/><i>Strong + deep policy</i>"]
+        L4["MicroVM (KVM)<br/><b>E2B, Microsandbox</b><br/><i>~90-200ms</i><br/><i>Strongest isolation</i>"]
+
+        L1 -->|"stronger"| L2 -->|"stronger"| L3 -->|"strongest"| L4
+      end
+
+      style SPECTRUM fill:#0d1117,stroke:none,color:#e6edf3
+      style L1 fill:#6e40c9,stroke:#bc8cff,stroke-width:2px,color:#fff
+      style L2 fill:#b35900,stroke:#d29922,stroke-width:2px,color:#fff
+      style L3 fill:#238636,stroke:#3fb950,stroke-width:2px,color:#fff
+      style L4 fill:#1f6feb,stroke:#58a6ff,stroke-width:2px,color:#fff
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Key insight:</strong> OpenShell is the only solution that combines <em>policy depth</em>
+    (Rego L4+L7, per-binary rules, inference routing) with <em>kernel hardening</em> (Landlock, seccomp, netns).
+    Other solutions optimize for either raw isolation strength (microVMs) or setup simplicity (process wrappers),
+    but none offer the same granularity of runtime policy control. The trade-off is operational complexity
+    and startup latency from the K8s layer.
+  </div>
+</section>
+
 </div>
 
 <footer>
